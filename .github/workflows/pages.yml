@@ -1,4 +1,4 @@
-name: Deploy Pendekarverse
+name: Deploy Gimmy
 on:
   push:
     branches: [main]
