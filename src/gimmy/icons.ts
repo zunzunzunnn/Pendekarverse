@@ -1,0 +1,9 @@
+export const icons: Record<string, string> = {
+  moth: '<svg viewBox="0 0 80 70"><path fill="#e5cd99" stroke="#fff1c9" stroke-width="2" d="M39 32C9-4 0 8 8 37c4 12 19 11 29 2C12 61 29 69 39 46c9 23 28 16 5-7 20 13 34 3 30-17C71 2 57 13 43 32Z"/><path stroke="#72523c" stroke-width="4" stroke-linecap="round" d="M41 27v24m0-23-8-11m8 11 8-11"/></svg>',
+  cricket:
+    '<svg viewBox="0 0 80 70"><path d="m20 53 11-23 12 20 14-32 11 36M32 30 19 12m29 19L63 9" fill="none" stroke="#a7d386" stroke-width="4" stroke-linecap="round"/><ellipse cx="41" cy="37" rx="24" ry="12" fill="#719255" stroke="#e1e9a5" stroke-width="2"/><circle cx="22" cy="32" r="9" fill="#abd078"/><circle cx="20" cy="29" r="2" fill="#173522"/></svg>',
+  beetle:
+    '<svg viewBox="0 0 80 70"><path d="m20 23 14 12-17 9m44-21L48 35l17 9M27 55l8-10m18 10-8-10" stroke="#e7b476" stroke-width="4" fill="none"/><ellipse cx="40" cy="38" rx="19" ry="23" fill="#957058" stroke="#f5d89f" stroke-width="2"/><path d="M40 22v38" stroke="#403529" stroke-width="3"/><ellipse cx="40" cy="18" rx="12" ry="9" fill="#473d32"/><circle cx="35" cy="15" r="2" fill="#e4e8b6"/></svg>',
+  leaf: '<svg viewBox="0 0 80 70"><path d="M66 8C14 7 5 31 20 53c26 9 47-11 46-45" fill="#dba454" stroke="#ffe2a2" stroke-width="2"/><path d="m12 63 45-45M26 45l-1-18m15 5 14 4" stroke="#9a642e" stroke-width="3" fill="none"/></svg>',
+  frog: '<svg viewBox="0 0 80 70"><ellipse cx="40" cy="43" rx="27" ry="18" fill="#76a16d"/><circle cx="24" cy="25" r="13" fill="#9cc88a"/><circle cx="56" cy="25" r="13" fill="#9cc88a"/><circle cx="25" cy="24" r="6" fill="#ffdf99"/><circle cx="55" cy="24" r="6" fill="#ffdf99"/><circle cx="25" cy="24" r="3" fill="#1b3029"/><circle cx="55" cy="24" r="3" fill="#1b3029"/><path d="M28 42q12 10 24 0" stroke="#335241" fill="none" stroke-width="2"/></svg>',
+};

@@ -1,16 +1,26 @@
 # Gimmy : The Little Tarsius
 
-Prototipe permainan santai 2.5D: jaga tidur Gimmy, beri makan serangga, dan redakan gangguan hutan. Karakter 3D memakai rig dan animasi yang disediakan pengguna; latar serta logo berasal dari folder Drive proyek.
+Game menjaga tidur dalam scene 2.5D. Jaga Sleep di atas nol sampai countdown mencapai 00:00. Karakter memakai rig dan animasi Gimmy; UI dan latar baru berasal dari aset proyek.
 
-## Bermain
+## Cara bermain
 
-Pilih **Mulai bermimpi**, atur kualitas visual, lalu mulai. Ketuk serangga atau seret ke sarang; seret daun menjauh; ketuk ranting saat katak muncul. Tab/Enter dapat digunakan sebagai alternatif keyboard. Esc menjeda permainan.
+Pilih **Play**, atur kualitas visual, lalu tunggu cue siap. Ketuk serangga atau seret ke sarang untuk memberi makan. Geser daun menjauh, atau ketuk daun lalu pilih arah buang. Ketuk ranting ketika katak datang. Tab/Enter mendukung keyboard; Esc menjeda.
 
-Sleep Chain memberi 10, 20, 30, 50 poin pada detik 30, 60, 90, 120; selanjutnya 50 poin per 30 detik. Poin langsung tersimpan di perangkat. Gimmy bangun saat Sleep habis, tanpa bonus maupun pengurangan poin. Setiap 100 poin menaikkan satu level; Rainforest terbuka di Level 2 dengan drain Sleep lebih tinggi dan daun lebih sering.
+| Level | Total poin untuk membuka | Durasi |
+| --- | ---: | --- |
+| 1 | 0 | 02:00 |
+| 2 | 40 | 01:30 |
+| 3 | 100 | 01:00 |
+| 4 | 180 | 00:30 |
+| 5 | 280 | 00:30 |
 
-Kamera mendekat ketika Sleep rendah atau tidak ada input selama 8 detik. Kamera ditahan selama drag. Berpindah tab menjeda sesi. Pengaturan gerakan minimum menonaktifkan zoom.
+Level 5 memiliki gangguan lebih cepat/rapat daripada Level 4, hingga empat ancaman bersamaan. Seluruh level meningkat intensitasnya menjelang 00:00. Makanan memulihkan Sleep, tidak menambah waktu.
 
-## Pengembangan
+Setiap milestone 25%, 50%, 75%, dan penyelesaian sesi memberi **5 poin**. Poin langsung tersimpan dan tidak hangus saat gagal. Bangun tidak memberi bonus. Terbukanya level baru tidak mengubah durasi atau kesulitan sesi aktif. Level maksimum 5; level lama dapat diulang.
+
+Pengaturan/tab tersembunyi menjeda waktu dan gangguan. Zoom mendekat saat Sleep rendah atau tanpa input selama 8 detik; zoom dikunci ketika drag. Pengaturan gerakan minimum menonaktifkan zoom.
+
+## Menjalankan dan menguji
 
 Node.js 22.12+:
 
@@ -21,16 +31,20 @@ npm test
 npm run build
 ```
 
-Uji browser lokal (Chrome terpasang, server port 5187 aktif):
+Dengan Chrome terpasang dan server lokal port 5187 aktif:
 
 ```sh
 node tests/gimmy-gameplay.mjs
 ```
 
-GitHub Pages memakai workflow `.github/workflows/pages.yml`, build dari `main`. Vite menggunakan base relatif agar bisa dimainkan dari subdirektori repository. Repository tidak diubah namanya.
+GitHub Pages dibangun dari main melalui `.github/workflows/pages.yml`. Base relatif mendukung URL repository. Diagnostic hooks hanya tersedia saat development.
 
-## Aset dan batasan
+## UI dan penyimpanan
 
-Lihat [catatan implementasi](GIMMY_IMPLEMENTATION.md) dan [rencana](GIMIY_PLAN.md). Tekstur warna tubuh final menyusul dari pengguna; warna runtime saat ini sementara. Ekspresi mata tertutup belum terintegrasi dari rig Blender. Gambar Bug Book/gameplay saat ini ikon SVG prototipe, bukan sprite final. Progres disimpan lokal, tanpa akun atau sinkronisasi cloud.
+Header/H1/H2 menggunakan Slackey; body, label dan angka menggunakan Sniglet Regular. Font di-host lokal; lisensi ada di public/gimmy/fonts. Semua tombol utama menggunakan salinan runtime aset PNG pengguna. Poin berada di atas Sleep Chain; Sleep Meter berada di bawah.
 
-Pendekarverse lama tetap tersedia dalam riwayat Git dan kode lama; dokumentasinya di [PENDEKARVERSE_LEGACY.md](PENDEKARVERSE_LEGACY.md).
+Save v1 dibaca dan dimigrasikan ke `gimmy.progress.v2`: XP, koleksi, pengaturan dan rekor lama dipertahankan. Level terbuka dihitung dari poin. Versi challenge ini memakai Forest; status unlock Rainforest lama tetap disimpan untuk integrasi map berikutnya. Tidak ada akun atau sinkronisasi cloud.
+
+Lihat [rencana](GIMMY_IMPROVEMENT_PLAN.md) dan [laporan implementasi](GIMMY_V3_REPORT.md). Tekstur tubuh final dan ekspresi mata tertutup masih menyusul; warna karakter serta ikon obstacle masih aset sementara. Pengujian ponsel menggunakan emulasi, belum performance sign-off perangkat fisik.
+
+Pendekarverse lama tetap tersimpan dalam riwayat Git dan [dokumentasi legacy](PENDEKARVERSE_LEGACY.md).

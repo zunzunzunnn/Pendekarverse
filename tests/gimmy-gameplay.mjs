@@ -7,143 +7,189 @@ const browser = await chromium.launch({
 });
 const errors = [];
 let checks = 0;
-const check = (condition, message) => {
-  assert.ok(condition, message);
+const check = (v, s) => {
+  assert.ok(v, s);
   checks++;
 };
 try {
-  const context = await browser.newContext({
+  const ctx = await browser.newContext({
     viewport: { width: 390, height: 844 },
-    isMobile: true,
     hasTouch: true,
+    isMobile: true,
   });
-  const page = await context.newPage();
-  page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("http://127.0.0.1:5187");
-  await page.waitForFunction(() => window.__gimmy?.snapshot.ready);
-  const snapshot = () => page.evaluate(() => window.__gimmy.snapshot);
+  await ctx.addInitScript(() => {
+    if (!localStorage.getItem("gimmy.progress.v2"))
+      localStorage.setItem(
+        "gimmy.progress.v1",
+        JSON.stringify({
+          xp: 35,
+          best: 122,
+          bugs: { moth: 7, cricket: 2, beetle: 1 },
+          quality: "low",
+          sound: false,
+          reduced: false,
+        }),
+      );
+  });
+  const p = await ctx.newPage();
+  p.on("pageerror", (e) => errors.push(e.message));
+  await p.goto("http://127.0.0.1:5187");
+  await p.waitForFunction(() => window.__gimmy?.snapshot.ready);
+  const snap = () => p.evaluate(() => window.__gimmy.snapshot);
+  check((await snap()).xp === 35, "old points migrated");
   check(
-    (await page.title()) === "Gimmy : The Little Tarsius",
-    "official title",
+    (await p.locator("#play img").getAttribute("src")).endsWith(
+      "/gimmy/ui/play.webp",
+    ),
+    "Play uses supplied asset",
   );
-  await page.locator("#map-select").click();
-  check(
-    await page.locator("[data-map=rainforest]").isDisabled(),
-    "map initially locked",
-  );
-  await page.getByRole("button", { name: "Tutup", exact: true }).click();
-  await page.locator("#play").tap();
-  await page.locator("#quality").selectOption("low");
-  await page.locator("#confirm").tap();
-  check((await snapshot()).state === "playing", "start with chosen quality");
-  await page.evaluate(() => window.__gimmy.spawn("moth"));
-  const before = (await snapshot()).sleep;
-  const mothBox = await page
+  await p.locator("#profile").tap();
+  check(await p.locator('[data-level="2"]').isDisabled(), "locked level");
+  await p.getByRole("button", { name: "Tutup", exact: true }).tap();
+  await p.locator("#play").tap();
+  await p.locator("#confirm").tap();
+  check((await snap()).state === "ready", "start has ready countdown");
+  await p.waitForFunction(() => window.__gimmy.snapshot.state === "playing");
+  check((await snap()).remaining > 119, "full gameplay duration after cue");
+  await p.evaluate(() => window.__gimmy.spawn("moth"));
+  const box = await p
     .getByRole("button", { name: "Beri makan Ngengat" })
     .first()
     .boundingBox();
-  await page.touchscreen.tap(
-    mothBox.x + mothBox.width / 2,
-    mothBox.y + mothBox.height / 2,
+  const before = (await snap()).sleep;
+  await p.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+  check((await snap()).sleep > before + 8, "touch feeds");
+  await p.evaluate(() => window.__gimmy.spawn("leaf"));
+  const leaf = await p
+    .getByRole("button", { name: "Usir daun" })
+    .first()
+    .boundingBox();
+  await p.touchscreen.tap(leaf.x + leaf.width / 2, leaf.y + leaf.height / 2);
+  const arrow = await p
+    .getByRole("button", { name: "Buang daun ke kiri" })
+    .boundingBox();
+  check(!!arrow, "leaf tap has accessible alternative");
+  await p.touchscreen.tap(
+    arrow.x + arrow.width / 2,
+    arrow.y + arrow.height / 2,
   );
-  check((await snapshot()).sleep > before + 8, "touch feeding");
-  await page.evaluate(() => window.__gimmy.spawn("leaf"));
-  const leaf = page.getByRole("button", { name: "Usir daun" }).first();
-  await leaf.focus();
-  await page.keyboard.press("Enter");
   check(
-    (await page.getByRole("button", { name: "Usir daun" }).count()) === 0,
-    "keyboard leaf accessible",
+    !(await snap()).entities.some((e) => e.type === "leaf"),
+    "leaf removed",
   );
-  await page.evaluate(() => {
-    window.__gimmy.setSleep(60);
+  await p.evaluate(() => {
     window.__gimmy.spawn("frog");
   });
-  await page.locator("#branch").tap();
+  await p.locator("#branch").tap();
   check(
-    !(await snapshot()).entities.some((e) => e.type === "frog"),
-    "frog distraction",
+    !(await snap()).entities.some((e) => e.type === "frog"),
+    "frog distracted",
   );
-  await page.evaluate(() => {
-    window.__gimmy.spawn("leaf");
-    window.__gimmy.setSleep(80);
-    window.__gimmy.setIdle(12);
-  });
-  await page.waitForTimeout(900);
-  check((await snapshot()).zoom > 1.02, "idle camera zoom");
-  const bounds = await page
-    .getByRole("button", { name: "Usir daun" })
+  await p.evaluate(() => window.__gimmy.setIdle(12));
+  await p.waitForTimeout(600);
+  check((await snap()).zoom > 1.02, "idle zoom");
+  await p.evaluate(() => window.__gimmy.spawn("beetle"));
+  const b = await p
+    .getByRole("button", { name: "Beri makan Kumbang" })
+    .first()
     .boundingBox();
-  await page.mouse.move(
-    bounds.x + bounds.width / 2,
-    bounds.y + bounds.height / 2,
-  );
-  await page.mouse.down();
-  const locked = (await snapshot()).zoom;
-  await page.evaluate(() => window.__gimmy.setSleep(5));
-  await page.waitForTimeout(400);
+  await p.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+  await p.mouse.down();
+  const z = (await snap()).zoom;
+  await p.evaluate(() => window.__gimmy.setSleep(20));
+  await p.waitForTimeout(300);
+  check(Math.abs((await snap()).zoom - z) < 0.002, "drag holds camera");
+  await p.mouse.up();
+  await p.evaluate(() => window.__gimmy.feed());
+  await p.locator("#settings").tap();
+  check((await snap()).state === "paused", "settings pauses");
+  const time = (await snap()).seconds;
+  await p.waitForTimeout(400);
+  check((await snap()).seconds === time, "settings freezes timer");
+  await p.locator("#quality").selectOption("medium");
+  await p.locator("#confirm").tap();
+  await p.waitForFunction(() => window.__gimmy.snapshot.state === "ready");
+  check((await snap()).seconds === time, "resume cue freezes timer");
+  await p.waitForFunction(() => window.__gimmy.snapshot.state === "playing");
+  await p.evaluate(() => window.__gimmy.step(30, true));
+  check((await snap()).xp === 40, "first reward opens level two");
+  check((await snap()).runLevel === 1, "active level unchanged");
+  check((await snap()).remaining > 80, "duration unchanged after unlock");
+  await p.evaluate(() => window.__gimmy.wake());
+  await p.waitForFunction(() => window.__gimmy.snapshot.state === "result");
+  check((await snap()).xp === 40, "failure retains banked points");
   check(
-    Math.abs((await snapshot()).zoom - locked) < 0.003,
-    "camera fixed during drag",
+    await p.locator("#next-level").isVisible(),
+    "next level available after failed run with sufficient points",
   );
-  await page.mouse.move(380, 350, { steps: 10 });
-  await page.mouse.up();
-  check(!(await snapshot()).drag, "drag released");
-  await page.evaluate(() => window.__gimmy.feed());
-  await page.locator("#pause").tap();
-  const paused = (await snapshot()).seconds;
-  await page.waitForTimeout(500);
-  check((await snapshot()).seconds === paused, "pause freezes time");
-  await page.locator("#resume").tap();
-  await page.waitForFunction(() => window.__gimmy.snapshot.state === "playing");
-  await page.evaluate(() => {
-    window.__gimmy.feed();
-    window.__gimmy.step(31);
-    window.__gimmy.feed();
-    window.__gimmy.step(30);
-    window.__gimmy.feed();
-    window.__gimmy.step(30);
-    window.__gimmy.feed();
-    window.__gimmy.step(30);
-  });
-  check((await snapshot()).xp === 110, "four milestones bank 110 XP");
-  check((await snapshot()).level === 2, "level unlock");
-  await page.evaluate(() => window.__gimmy.wake());
-  await page.waitForTimeout(3100);
-  check((await snapshot()).state === "result", "wake result reached");
-  check((await snapshot()).xp === 110, "wake does not add or remove points");
-  await page.locator("#back-home").tap();
-  await page.reload();
-  await page.waitForFunction(() => window.__gimmy?.snapshot.ready);
-  check((await snapshot()).xp === 110, "bank survives reload");
-  await page.locator("#map-select").tap();
-  await page.locator("[data-map=rainforest]").tap();
-  await page.locator("#play").tap();
-  await page.locator("#confirm").tap();
-  check((await snapshot()).map === "rainforest", "second map playable");
-  await page.screenshot({ path: "tests/gimmy-rainforest.png" });
-  for (let i = 0; i < 10; i++) {
-    await page.evaluate(() => {
+  await p.locator("#next-level").tap();
+  await p.evaluate(() => window.__gimmy.skipReady());
+  check((await snap()).runLevel === 2, "new run uses unlocked level");
+  check((await snap()).remaining > 89, "level two 90 seconds");
+  await p.evaluate(() => window.__gimmy.home());
+  await p.reload();
+  await p.waitForFunction(() => window.__gimmy?.snapshot.ready);
+  check((await snap()).xp === 40, "v2 persists after reload");
+  await p.evaluate(() => window.__gimmy.setPoints(280));
+  for (let level = 1; level <= 5; level++) {
+    await p.evaluate((level) => {
       window.__gimmy.home();
-      window.__gimmy.start();
-    });
-    check((await snapshot()).entities.length === 0, "restart clean " + i);
+      window.__gimmy.start(level);
+      window.__gimmy.skipReady();
+    }, level);
+    const r = await snap();
+    check(
+      r.remaining === [120, 90, 60, 30, 30][level - 1],
+      `level ${level} duration`,
+    );
+    await p.evaluate(() => window.__gimmy.step(130, true));
+    check((await snap()).outcome === "success", `level ${level} can complete`);
+    check((await snap()).points === 20, `level ${level} rewards 20`);
   }
-  await page.evaluate(() => window.__gimmy.home());
-  await page.setViewportSize({ width: 844, height: 390 });
-  await page.screenshot({ path: "tests/gimmy-landscape.png" });
-  check(await page.locator("#play").isVisible(), "landscape play visible");
-  check(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-    "no horizontal overflow",
-  );
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.screenshot({ path: "tests/gimmy-desktop.png" });
-  check(errors.length === 0, "no runtime errors: " + errors.join("; "));
-  console.log(JSON.stringify({ checks, errors }, null, 2));
-  await context.close();
+  check((await snap()).level === 5, "level capped");
+  await p.locator("#back-home").tap();
+  await p.locator("#profile").tap();
+  check((await p.locator("[data-level]").count()) === 5, "no level six");
+  await p.getByRole("button", { name: "Tutup", exact: true }).tap();
+  for (const [w, h] of [
+    [360, 640],
+    [390, 844],
+    [844, 390],
+    [1440, 900],
+  ]) {
+    await p.setViewportSize({ width: w, height: h });
+    await p.screenshot({ path: `tests/v3-home-${w}.png` });
+    const play = await p.locator("#play").boundingBox();
+    check(play.y >= 0 && play.y + play.height <= h, `Play inside ${w}`);
+    check(
+      await p.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      `no overflow ${w}`,
+    );
+    await p.evaluate(() => {
+      window.__gimmy.start(5);
+      window.__gimmy.skipReady();
+    });
+    await p.screenshot({ path: `tests/v3-game-${w}.png` });
+    const meter = await p.locator(".sleep-panel").boundingBox(),
+      chain = await p.locator(".chain").boundingBox(),
+      points = await p.locator("#run-points").boundingBox();
+    check(meter.y > h * 0.6, "meter below");
+    check(points.y + points.height <= chain.y + 1, "points above chain");
+    await p.evaluate(() => window.__gimmy.home());
+  }
+  for (let i = 0; i < 10; i++) {
+    await p.evaluate(() => {
+      window.__gimmy.start(1);
+      window.__gimmy.skipReady();
+      window.__gimmy.home();
+    });
+    check((await snap()).entities.length === 0, "restart clears objects");
+  }
+  check(errors.length === 0, "no runtime errors");
+  console.log(JSON.stringify({ checks, errors }));
+  await ctx.close();
 } finally {
   await browser.close();
 }

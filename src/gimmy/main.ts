@@ -1,121 +1,99 @@
-import "@fontsource/manrope/400.css";
-import "@fontsource/manrope/600.css";
-import "@fontsource/manrope/800.css";
-import "@fontsource/cormorant-garamond/600.css";
 import "./style.css";
 import { GimmyScene } from "./scene";
 import {
-  SleepRun,
   CameraDirector,
   freshProgress,
-  restoreProgress,
-  levelFor,
-  sleepLabel,
   foodValue,
   bugNames,
+  sleepLabel,
   type Bug,
-  type MapId,
   type Quality,
 } from "./rules";
-
+import { LEVELS, configFor, levelFor, damageFor } from "./levels";
+import { CountdownRun } from "./countdown";
+import { ObstacleDirector } from "./director";
+import { SAVE_KEY, loadProgress, credit } from "./storage";
+import { icons } from "./icons";
 const $ = <T extends HTMLElement = HTMLElement>(s: string) =>
   document.querySelector<T>(s)!;
-const base = import.meta.env.BASE_URL;
-const key = "gimmy.progress.v1";
-let storageOK = true;
-let progress = freshProgress();
+const base = import.meta.env.BASE_URL,
+  asset = (name: string) => `${base}gimmy/ui/${name}.webp`;
+let progress = freshProgress(),
+  storageOK = true;
 try {
-  progress = restoreProgress(localStorage.getItem(key), progress);
+  progress = loadProgress(localStorage);
 } catch {
   storageOK = false;
 }
 function save() {
   try {
-    localStorage.setItem(key, JSON.stringify(progress));
+    localStorage.setItem(SAVE_KEY, JSON.stringify(progress));
   } catch {
-    storageOK = false;
+    if (storageOK) {
+      storageOK = false;
+      toast(
+        "Penyimpanan tidak tersedia. Poin hanya tersimpan selama halaman terbuka.",
+      );
+    }
   }
 }
-let map: MapId = "forest",
-  state: "home" | "playing" | "paused" | "waking" | "result" = "home";
-let run = new SleepRun(bank),
-  camera = new CameraDirector(),
-  idle = 0,
-  spawnAt = 5,
-  hazardAt = 14,
-  frogAt = 36,
-  wakeTime = 0,
-  frame = 0,
-  last = performance.now(),
-  serial = 0;
-let drag: {
-  entity: Entity;
-  pointer: number;
-  x: number;
-  y: number;
-  moved: boolean;
-} | null = null;
-let entities: Entity[] = [];
+type State = "home" | "ready" | "playing" | "paused" | "waking" | "result";
+type Kind = Bug | "leaf" | "frog";
 interface Entity {
   id: number;
-  type: Bug | "leaf" | "frog";
+  type: Kind;
   x: number;
   y: number;
-  life: number;
+  startX: number;
+  startY: number;
+  born: number;
+  due: number;
   max: number;
   el: HTMLButtonElement;
   used: boolean;
 }
-let scene: GimmyScene | undefined;
-let ready = false;
-const icons: Record<Entity["type"], string> = {
-  moth: '<svg viewBox="0 0 80 70"><path fill="#e5cd99" stroke="#fff1c9" stroke-width="2" d="M39 32C9-4 0 8 8 37c4 12 19 11 29 2C12 61 29 69 39 46c9 23 28 16 5-7 20 13 34 3 30-17C71 2 57 13 43 32Z"/><path stroke="#72523c" stroke-width="4" stroke-linecap="round" d="M41 27v24m0-23-8-11m8 11 8-11"/></svg>',
-  cricket:
-    '<svg viewBox="0 0 80 70"><path d="m20 53 11-23 12 20 14-32 11 36M32 30 19 12m29 19L63 9" fill="none" stroke="#a7d386" stroke-width="4" stroke-linecap="round"/><ellipse cx="41" cy="37" rx="24" ry="12" fill="#719255" stroke="#e1e9a5" stroke-width="2"/><circle cx="22" cy="32" r="9" fill="#abd078"/><circle cx="20" cy="29" r="2" fill="#173522"/></svg>',
-  beetle:
-    '<svg viewBox="0 0 80 70"><path d="m20 23 14 12-17 9m44-21L48 35l17 9M27 55l8-10m18 10-8-10" stroke="#e7b476" stroke-width="4" fill="none"/><ellipse cx="40" cy="38" rx="19" ry="23" fill="#957058" stroke="#f5d89f" stroke-width="2"/><path d="M40 22v38" stroke="#403529" stroke-width="3"/><ellipse cx="40" cy="18" rx="12" ry="9" fill="#473d32"/><circle cx="35" cy="15" r="2" fill="#e4e8b6"/></svg>',
-  leaf: '<svg viewBox="0 0 80 70"><path d="M66 8C14 7 5 31 20 53c26 9 47-11 46-45" fill="#dba454" stroke="#ffe2a2" stroke-width="2"/><path d="m12 63 45-45M26 45l-1-18m15 5 14 4" stroke="#9a642e" stroke-width="3" fill="none"/></svg>',
-  frog: '<svg viewBox="0 0 80 70"><ellipse cx="40" cy="43" rx="27" ry="18" fill="#76a16d"/><circle cx="24" cy="25" r="13" fill="#9cc88a"/><circle cx="56" cy="25" r="13" fill="#9cc88a"/><circle cx="25" cy="24" r="6" fill="#ffdf99"/><circle cx="55" cy="24" r="6" fill="#ffdf99"/><circle cx="25" cy="24" r="3" fill="#1b3029"/><circle cx="55" cy="24" r="3" fill="#1b3029"/><path d="M28 42q12 10 24 0" stroke="#335241" fill="none" stroke-width="2"/></svg>',
+let state: State = "home",
+  selected = levelFor(progress.xp),
+  runId = "",
+  run = new CountdownRun(selected, bank),
+  director = new ObstacleDirector(selected),
+  camera = new CameraDirector();
+let scene: GimmyScene | undefined,
+  ready = false,
+  idle = 0,
+  wakeTime = 0,
+  readyTime = 0,
+  last = performance.now(),
+  frame = 0,
+  serial = 0;
+let hitTimes: number[] = [];
+let entities: Entity[] = [],
+  drag: {
+    entity: Entity;
+    pointer: number;
+    x: number;
+    y: number;
+    moved: boolean;
+  } | null = null;
+const format = (t: number) => {
+  const n = Math.ceil(Math.max(0, t) - 1e-8);
+  return `${Math.floor(n / 60)
+    .toString()
+    .padStart(2, "0")}:${(n % 60).toString().padStart(2, "0")}`;
 };
-$("#app").innerHTML = `
- <div class="backdrop"></div><div class="vignette"></div>
- <main id="shell">
-  <div id="world-frame"><div id="stage"><div class="forest-art"></div><div class="mist"></div><div id="fireflies" aria-hidden="true">${Array.from({ length: 18 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--y:${(i * 23) % 90}%;--delay:${i * 0.4}s"></i>`).join("")}</div><div class="gimmy-shadow"></div><canvas id="gimmy" aria-label="Gimmy si tarsius kecil sedang tidur"></canvas><div class="zzz" aria-hidden="true">z<span>z</span><small>z</small></div><div id="objects"></div><div id="rain" aria-hidden="true"></div></div></div>
-  <header><a class="wordmark" href="#" aria-label="Beranda Gimmy">GIMMY<span>THE LITTLE TARSIUS</span></a><div class="header-right"><span class="edition">A LITTLE WORLD OF REST</span><button class="icon-button" id="settings" aria-label="Pengaturan">⚙</button></div></header>
-  <div id="profile" class="glass"><span class="moon-badge">☾</span><div><small>PENJAGA MIMPI</small><strong id="level"></strong><div class="xp-track"><i id="xpbar"></i></div></div><span id="xp"></span></div>
-  <button id="map-select" class="glass"><small>DUNIA SAAT INI</small><strong id="map-name">Moonlit Forest</strong><span>Jelajahi peta ↗</span></button>
-  <section id="home"><img class="logo" src="${base}gimmy/logo.webp" alt="Gimmy : The Little Tarsius"/><div class="home-copy"><span class="eyebrow">SMALL FRIEND. SWEET DREAMS.</span><h1>Satu mimpi kecil.<br>Satu penjaga sepertimu.</h1><p>Redakan riuh hutan. Bantu Gimmy tidur lebih lama.</p><button class="primary" id="play" disabled>Menyiapkan Gimmy…</button><small id="load-note" role="status">Membangunkan dunia kecilnya</small></div></section>
-  <section id="hud" hidden><div class="sleep-panel glass"><div><span>☾ &nbsp; SLEEP METER</span><strong id="sleep-label">Deep sleep</strong></div><div class="sleep-track"><i id="sleep-fill"></i></div><small><span id="sleep-number">80</span> / 100 <span id="risk">Jaga agar mimpinya tetap hangat</span></small></div><div class="chain glass"><small>SLEEP CHAIN</small><strong id="timer">00:00</strong><span id="next-reward">30 dtk → +10 poin</span></div><button class="icon-button" id="pause" aria-label="Jeda permainan">Ⅱ</button><div id="hint" role="status"></div><button id="branch" class="branch" hidden>♧ Ketuk ranting <small>Alihkan katak</small></button><div id="run-points">✦ <span>0</span> poin tersimpan</div></section>
-  <nav id="home-nav"><button id="book"><span>♧</span>Bug Book</button><button id="bed"><span>☾</span>Sarang Gimmy</button><button id="how"><span>?</span>Cara bermain</button></nav>
-  <footer><span>GIMMY • PROTOTYPE 0.2</span><span id="best"></span><span class="desktop-note">Ambil jeda. Jaga sebuah mimpi.</span></footer>
+$("#app").innerHTML = `<main id="shell">
+ <div id="stage"><div class="forest-art"></div><div class="mist"></div><div id="fireflies" aria-hidden="true">${Array.from({ length: 16 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--y:${(i * 23) % 90}%;--delay:${i * 0.4}s"></i>`).join("")}</div><div id="character-anchor"><div class="gimmy-shadow"></div><canvas id="gimmy" aria-label="Gimmy si tarsius kecil"></canvas><div class="zzz" aria-hidden="true">z<span>z</span><small>z</small></div></div><div id="objects"></div></div>
+ <div class="edge-shade"></div>
+ <header><a href="#" class="wordmark" aria-label="Beranda Gimmy">GIMMY<span>THE LITTLE TARSIUS</span></a><button id="settings" class="art-button" aria-label="Pengaturan"><img src="${asset("settings")}" alt=""/></button></header>
+ <button id="profile" aria-label="Pilih level"><img src="${asset("level")}" alt=""/><div><h2>Gimmy</h2><strong id="level"></strong><small id="xp"></small><div class="xp-track"><i id="xpbar"></i></div></div></button>
+ <button id="map-select" class="map-badge" aria-label="Forest, peta aktif"><img src="${asset("forest-card")}" alt=""/><span>Forest <small>AKTIF</small></span></button>
+ <section id="home"><img class="logo" src="${base}gimmy/logo.webp" alt="Gimmy : The Little Tarsius"/><div class="home-copy"><h1>Jaga mimpi kecilnya.</h1><p>Redakan riuh hutan. Bertahan sampai 00:00.</p><button id="play" class="art-button" aria-label="Play" disabled><img src="${asset("play")}" alt="Play"/></button><small id="load-note" role="status">Menyiapkan Gimmy…</small><button id="level-choice" class="text-button">Pilih tantangan</button></div></section>
+ <section id="hud" hidden><div class="chain-stack"><div id="run-points"><span>✦ Poin tersimpan</span><strong>0</strong><small id="earned">+0 sesi ini</small></div><div class="chain"><img src="${asset("chain")}" alt="Sleep Chain"/><strong id="timer">02:00</strong></div><small id="next-reward"></small><div id="milestones" aria-label="Milestone sesi"><i></i><i></i><i></i><i></i></div></div>
+ <button id="pause" class="round-button" aria-label="Jeda permainan">Ⅱ</button><div id="hint" role="status"></div><button id="branch" hidden>♧ Ketuk ranting <small>Alihkan katak</small></button><div class="sleep-panel"><div><span>☾ SLEEP METER</span><strong id="sleep-label">Cozy</strong></div><div class="sleep-track" role="progressbar" aria-label="Sleep Meter" aria-valuemin="0" aria-valuemax="100"><i id="sleep-fill"></i></div><small><span id="sleep-number">80</span> / 100 <span id="risk">Jaga mimpinya sampai waktu habis</span></small></div></section>
+ <nav id="home-nav"><button id="book" class="art-button" aria-label="Bug Guide"><img src="${asset("bugs")}" alt="Bug Guide"/></button><button id="how" class="art-button" aria-label="Cara bermain"><img src="${asset("info")}" alt="Info"/></button></nav>
+ <div id="ready-cue" hidden aria-live="polite"></div><footer><span>GIMMY · SLEEP CHALLENGE</span><span id="best"></span></footer>
  </main><div id="toast" role="status"></div><dialog id="dialog" aria-labelledby="dialog-title"></dialog>`;
 const modal = $<HTMLDialogElement>("#dialog");
-const format = (t: number) =>
-  `${Math.floor(t / 60)
-    .toString()
-    .padStart(2, "0")}:${Math.floor(t % 60)
-    .toString()
-    .padStart(2, "0")}`;
-function refreshProfile() {
-  $("#level").textContent = `Level ${levelFor(progress.xp)}`;
-  $("#xp").textContent = `${progress.xp % 100}/100 XP`;
-  $("#xpbar").style.width = `${progress.xp % 100}%`;
-  $("#best").textContent = `REKOR TIDUR ${format(progress.best)}`;
-}
-function bank(points: number) {
-  const prev = levelFor(progress.xp);
-  progress.xp += points;
-  save();
-  refreshProfile();
-  toast(
-    levelFor(progress.xp) > prev
-      ? prev === 1
-        ? "Level naik! Rainforest terbuka 🌿"
-        : `Naik ke Level ${levelFor(progress.xp)}!`
-      : `Sleep Chain · +${points} poin tersimpan`,
-  );
-  tone(660);
-}
 let toastTimer = 0;
 function toast(message: string) {
   $("#toast").textContent = message;
@@ -123,7 +101,7 @@ function toast(message: string) {
   clearTimeout(toastTimer);
   toastTimer = window.setTimeout(
     () => $("#toast").classList.remove("show"),
-    3500,
+    2200,
   );
 }
 let audio: AudioContext | undefined;
@@ -134,43 +112,68 @@ function tone(freq = 440) {
     void audio.resume();
     const o = audio.createOscillator(),
       g = audio.createGain();
-    o.type = "sine";
-    o.frequency.setValueAtTime(freq, audio.currentTime);
-    g.gain.setValueAtTime(0.035, audio.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.4);
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0.025, audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.35);
     o.connect(g).connect(audio.destination);
     o.start();
-    o.stop(audio.currentTime + 0.4);
+    o.stop(audio.currentTime + 0.35);
   } catch {}
 }
+function refreshProfile() {
+  const unlocked = levelFor(progress.xp),
+    active = state === "home" ? selected : run.level,
+    next = LEVELS[unlocked];
+  $("#level").textContent =
+    `Level ${active} / 5 · ${format(configFor(active).duration)}`;
+  $("#xp").textContent = next
+    ? `${progress.xp}/${next.threshold} poin → Lv.${unlocked + 1}`
+    : `${progress.xp} poin · Level maksimum`;
+  const min = configFor(unlocked).threshold;
+  $("#xpbar").style.width = next
+    ? `${((progress.xp - min) / (next.threshold - min)) * 100}%`
+    : "100%";
+  $("#best").textContent =
+    `${progress.completed?.length ?? 0}/5 TANTANGAN SELESAI`;
+  $("#level-choice").textContent =
+    `Level ${selected} · ${format(configFor(selected).duration)} · Pilih tantangan ↗`;
+}
+function bank(_points: number, milestone: number) {
+  const prev = levelFor(progress.xp);
+  if (!credit(progress, runId, milestone)) return;
+  save();
+  refreshProfile();
+  toast(
+    levelFor(progress.xp) > prev
+      ? `Level ${levelFor(progress.xp)} terbuka untuk sesi berikutnya!`
+      : "+5 poin tersimpan",
+  );
+  tone(660);
+}
 function dialog(title: string, body: string) {
-  modal.innerHTML = `<button class="close icon-button" aria-label="Tutup">×</button><span class="eyebrow">GIMMY • A MOMENT OF QUIET</span><h2 id="dialog-title">${title}</h2>${body}`;
+  modal.innerHTML = `<button class="close round-button" aria-label="Tutup">×</button><span class="eyebrow">GIMMY · THE LITTLE TARSIUS</span><h2 id="dialog-title">${title}</h2>${body}`;
   modal.querySelector(".close")!.addEventListener("click", () => modal.close());
   if (!modal.open) modal.showModal();
 }
-function setMap(next: MapId) {
-  map = next;
-  document.body.dataset.map = map;
-  $("#map-name").textContent =
-    map === "forest" ? "Moonlit Forest" : "Misty Rainforest";
-}
-function chooseMap() {
+function chooseLevel() {
   dialog(
-    "Dunia untuk bermimpi",
-    `<p>Mimpi yang panjang membuka tempat baru. Rainforest terbuka di Level 2, dengan 100 poin.</p><div class="map-grid"><button class="map-card forest" data-map="forest"><span>01 · TERBUKA</span><strong>Moonlit Forest</strong><small>Malam tenang, kunang-kunang & nyanyian hutan.</small></button><button class="map-card rainforest" data-map="rainforest" ${progress.xp < 100 ? "disabled" : ""}><span>02 · ${progress.xp < 100 ? `${progress.xp}/100 POIN` : "TERBUKA"}</span><strong>Misty Rainforest</strong><small>Hujan lembut. Daun lebih sering, tidur lebih rapuh.</small></button></div>`,
+    "Pilih mimpi berikutnya",
+    `<p>Level terbuka dari total poin. Poin tidak habis saat naik level.</p><div class="levels">${LEVELS.map((c) => `<button data-level="${c.level}" ${c.level > levelFor(progress.xp) ? "disabled" : ""} class="${c.level === selected ? "selected" : ""}"><strong>Level ${c.level}</strong><b>${format(c.duration)}</b><small>${c.level > levelFor(progress.xp) ? `${progress.xp}/${c.threshold} poin` : progress.completed?.includes(c.level) ? "✓ Pernah berhasil" : "Terbuka"}${c.level === 5 ? " · Ekstra sulit" : ""}</small></button>`).join("")}</div>`,
   );
-  modal.querySelectorAll<HTMLButtonElement>("[data-map]").forEach(
+  modal.querySelectorAll<HTMLButtonElement>("[data-level]").forEach(
     (b) =>
       (b.onclick = () => {
-        setMap(b.dataset.map as MapId);
+        selected = Number(b.dataset.level);
+        refreshProfile();
         modal.close();
       }),
   );
 }
 function settings(preSleep = false) {
+  if (state === "playing" || state === "ready") freeze();
   dialog(
-    preSleep ? "Sebelum terlelap" : "Sedikit kenyamanan",
-    `<p>${preSleep ? "Pilih kualitas visual, lalu jaga mimpi Gimmy selama mungkin." : "Atur dunia kecil ini supaya nyaman di perangkatmu."}</p><label class="field">Kualitas visual<select id="quality"><option value="low">Ringan · ponsel / hemat daya</option><option value="medium">Seimbang · desktop</option><option value="high">Tinggi · detail maksimal</option></select></label><label class="check"><input id="sound" type="checkbox" ${progress.sound ? "checked" : ""}/> Suara interaksi</label><label class="check"><input id="reduced" type="checkbox" ${progress.reduced ? "checked" : ""}/> Kurangi gerakan & zoom</label><div class="notice">Ketuk serangga untuk memberi makan. Geser daun menjauh. Ketuk ranting saat katak datang.</div><button id="confirm" class="primary">${preSleep ? "Mulai bermimpi" : "Simpan pengaturan"}</button>`,
+    preSleep ? "Sebelum terlelap" : "Pengaturan",
+    `<p>${preSleep ? `Level ${selected} · jaga Sleep sampai ${format(configFor(selected).duration)} berakhir.` : "Sesuaikan kenyamanan dunia kecil Gimmy."}</p><label class="field">Kualitas visual<select id="quality"><option value="low">Ringan · ponsel / hemat daya</option><option value="medium">Seimbang</option><option value="high">Tinggi</option></select></label><label class="check"><input id="sound" type="checkbox" ${progress.sound ? "checked" : ""}/> Suara interaksi</label><label class="check"><input id="reduced" type="checkbox" ${progress.reduced ? "checked" : ""}/> Kurangi gerakan & zoom</label><div class="notice">Ketuk makanan. Geser daun menjauh, atau ketuk daun lalu pilih arah buang. Ketuk ranting saat katak datang.</div><button id="confirm" class="primary">${preSleep ? "Mulai bermimpi" : "Simpan & lanjutkan"}</button>`,
   );
   $<HTMLSelectElement>("#quality").value = progress.quality;
   $("#confirm").onclick = () => {
@@ -188,147 +191,202 @@ function applyQuality() {
   document.body.classList.toggle("reduced", progress.reduced);
   scene?.quality(progress.quality);
 }
-function book() {
-  dialog(
-    "Kawan kecil di hutan",
-    `<p>Kenali siapa yang membantu Gimmy, dan siapa yang perlu dialihkan.</p><div class="bug-grid">${(["moth", "cricket", "beetle"] as Bug[]).map((type) => `<article><div class="bug-art">${icons[type]}</div><h3>${bugNames[type]}</h3><b>+${foodValue[type]} Sleep</b><p>${type === "cricket" ? "Tangkap sebelum berbunyi. Terlambat: −5 Sleep." : type === "beetle" ? "Lambat, mengenyangkan, dan paling disukai Gimmy." : "Lembut dan tenang. Ketuk atau geser ke sarang."}</p><small>${progress.bugs[type]} ditemukan</small></article>`).join("")}</div><div class="notice">Daun: geser menjauh sebelum jatuh (−10). Katak: ketuk ranting sebelum berbunyi (−15).</div>`,
-  );
-}
 function help() {
   dialog(
-    "Jadilah penjaga mimpinya",
-    `<ol class="instructions"><li><b>Beri makan.</b> Ketuk serangga, atau geser ke sarang Gimmy.</li><li><b>Jaga ketenangan.</b> Geser daun menjauh; ketuk ranting untuk mengalihkan katak.</li><li><b>Rawat Sleep Chain.</b> Setiap 30 detik memberi poin. Poin langsung tersimpan untuk level.</li></ol><p>Kalau Sleep habis, Gimmy bangun. Tidak ada bonus bangun; poin yang telah didapat tetap milikmu.</p><p class="muted">Keyboard: Tab untuk memilih, Enter untuk menangkap/mengusir; Space atau Esc untuk jeda.</p>`,
+    "Sampai hitungan nol",
+    `<ol><li><b>Tujuan:</b> jaga Sleep di atas nol sampai countdown mencapai 00:00.</li><li><b>Makanan:</b> ketuk ngengat/kumbang/jangkrik atau seret ke sarang. Makanan menambah Sleep, bukan waktu.</li><li><b>Gangguan:</b> geser daun menjauh; ketuk ranting untuk mengalihkan katak. Jangkrik yang dibiarkan akan berbunyi.</li><li><b>Poin:</b> +5 pada 25%, 50%, 75%, dan penyelesaian sesi. Poin tetap tersimpan jika gagal.</li></ol><p>Level 2/3/4/5 terbuka pada 40/100/180/280 poin. Level sesi tidak berubah di tengah permainan.</p><p class="muted">Keyboard: Tab memilih, Enter menangkap/mengusir, Esc menjeda. Pada layar sentuh, daun juga bisa diketuk lalu dibuang memakai tombol arah.</p>`,
   );
 }
-function clearEntities() {
-  entities.forEach((e) => e.el.remove());
-  entities = [];
-  drag = null;
-  $("#branch").hidden = true;
+function book() {
+  dialog(
+    "Bug Guide",
+    `<div class="bug-grid">${(["moth", "cricket", "beetle"] as Bug[]).map((t) => `<article><div>${icons[t]}</div><h3>${bugNames[t]}</h3><b>+${foodValue[t]} Sleep</b><p>${t === "cricket" ? "Tangkap sebelum berbunyi: terlambat −8 Sleep." : t === "moth" ? "Makanan tenang, mudah ditangkap." : "Lambat dan mengenyangkan."}</p><small>${progress.bugs[t]} ditemukan</small></article>`).join("")}</div><div class="notice">Daun mengenai sarang: −12 Sleep. Katak berbunyi: −18 Sleep. Bar kecil pada objek menunjukkan waktu sebelum pergi atau berdampak.</div>`,
+  );
 }
-function start() {
+function remove(e: Entity) {
+  e.used = true;
+  document.querySelector(`[data-leaf-actions="${e.id}"]`)?.remove();
+  e.el.remove();
+  entities = entities.filter((x) => x !== e);
+  if (drag?.entity === e) cancelDrag();
+  if (e.type === "frog") $("#branch").hidden = true;
+}
+function clearEntities() {
+  for (const e of [...entities]) remove(e);
+  drag = null;
+}
+function beginReady(seconds: number) {
+  state = "ready";
+  readyTime = seconds;
+  $("#ready-cue").hidden = false;
+  $("#ready-cue").textContent = Math.ceil(seconds).toString();
+  last = performance.now();
+}
+function start(level = selected) {
+  clearTimeout(toastTimer);
+  $("#toast").classList.remove("show");
+  selected = Math.min(levelFor(progress.xp), Math.max(1, level));
   clearEntities();
-  run = new SleepRun(bank);
+  runId = crypto.randomUUID();
+  run = new CountdownRun(selected, bank);
+  director = new ObstacleDirector(selected);
   camera = new CameraDirector();
   idle = 0;
-  spawnAt = 5;
-  hazardAt = 14;
-  frogAt = 36;
   wakeTime = 0;
-  state = "playing";
+  hitTimes = [];
   document.body.classList.remove("awake");
+  document.body.classList.add("in-game");
   $("#home").hidden = true;
   $("#home-nav").hidden = true;
   $("#hud").hidden = false;
-  $("#map-select").hidden = true;
-  $("#profile").hidden = true;
-  document.body.classList.add("in-game");
+  $<HTMLButtonElement>("#profile").disabled = true;
+  $("#hint").textContent = "Bertahan sampai 00:00. Poin langsung tersimpan.";
   scene?.play("Sleeping Idle");
-  $("#hint").textContent = "Jaga mimpinya. Serangga pertama segera datang…";
-  tone(330);
+  beginReady(3);
+  refreshProfile();
   updateHUD();
+  tone(330);
 }
 function home() {
-  modal.close();
+  clearTimeout(toastTimer);
+  $("#toast").classList.remove("show");
   state = "home";
-  document.body.classList.remove("awake");
+  modal.close();
   clearEntities();
+  selected = levelFor(progress.xp);
+  $("#ready-cue").hidden = true;
   $("#home").hidden = false;
   $("#home-nav").hidden = false;
   $("#hud").hidden = true;
-  $("#map-select").hidden = false;
-  $("#profile").hidden = false;
-  document.body.classList.remove("in-game");
+  $<HTMLButtonElement>("#profile").disabled = false;
+  document.body.classList.remove("awake", "in-game");
   $("#stage").style.transform = "scale(1)";
   scene?.play("Sleeping Idle");
   refreshProfile();
 }
-function pause() {
-  if (state !== "playing") return;
+let pauseFrom: State = "playing";
+function freeze() {
+  pauseFrom = state;
   state = "paused";
   cancelDrag();
+  $("#ready-cue").hidden = true;
+}
+function pause() {
+  if (state !== "playing" && state !== "ready") return;
+  freeze();
   dialog(
-    "Hutan ikut beristirahat",
-    `<p>Waktu dan Sleep Meter dijeda. Mimpinya aman sampai kamu kembali.</p><button class="primary" id="resume">Lanjutkan mimpi</button><button class="secondary" id="leave">Selesai & kembali</button>`,
+    "Mimpinya aman",
+    `<p>Waktu, gangguan, dan Sleep dijeda sampai kamu melanjutkan.</p><button class="primary" id="resume">Lanjutkan mimpi</button><button class="secondary" id="leave">Kembali ke hutan</button>`,
   );
   $("#resume").onclick = () => modal.close();
-  $("#leave").onclick = () => {
-    progress.best = Math.max(progress.best, Math.floor(run.seconds));
-    save();
-    home();
-  };
+  $("#leave").onclick = home;
 }
 modal.addEventListener("close", () => {
-  if (state === "result") {
-    home();
-    return;
-  }
+  if (modal.open) return;
   if (state === "paused") {
-    state = "playing";
     idle = 0;
-    last = performance.now();
-  }
+    beginReady(pauseFrom === "ready" ? Math.max(1, readyTime) : 1);
+  } else if (state === "result") home();
 });
-function wake() {
+function finish() {
   if (state !== "playing") return;
-  state = "waking";
-  document.body.classList.add("awake");
-  wakeTime = 0;
   clearEntities();
-  progress.best = Math.max(progress.best, Math.floor(run.seconds));
-  save();
-  scene?.play("Wake up 01", true);
-  $("#hint").textContent = "Gimmy sudah bangun. Terima kasih menjaga mimpinya.";
-  tone(220);
+  if (run.outcome === "success") {
+    progress.completed = [
+      ...new Set([...(progress.completed ?? []), run.level]),
+    ];
+    save();
+    tone(740);
+    results();
+  } else if (run.awake) {
+    state = "waking";
+    wakeTime = 0;
+    document.body.classList.add("awake");
+    scene?.play("Wake up 01", true);
+    $("#hint").textContent = "Gimmy bangun. Poin milestone tetap tersimpan.";
+    tone(220);
+  }
 }
 function results() {
   state = "result";
+  const success = run.outcome === "success",
+    unlocked = levelFor(progress.xp);
   dialog(
-    "Selamat pagi, Gimmy.",
-    `<p>Setiap mimpi kecil tetap berarti.</p><div class="result-grid"><div><small>SLEEP CHAIN</small><strong>${format(run.seconds)}</strong></div><div><small>POIN TERSIMPAN</small><strong>+${run.points}</strong></div></div><p>Bangun tidak memberi bonus. Semua poin milestone sudah tersimpan untuk Level ${levelFor(progress.xp)}.</p><button id="again" class="primary">Satu mimpi lagi</button><button id="back-home" class="secondary">Kembali ke hutan</button>`,
+    success ? "Mimpi terjaga!" : "Gimmy sudah bangun",
+    `<p>${success ? `Level ${run.level} selesai. Terima kasih sudah menjaga mimpinya.` : "Coba lagi. Semua poin yang sudah didapat tetap tersimpan."}</p><div class="result-grid"><div><small>${success ? "COUNTDOWN SELESAI" : "WAKTU TERSISA"}</small><strong>${format(run.remaining)}</strong></div><div><small>POIN SESI</small><strong>+${run.points}</strong></div></div><p>Total ${progress.xp} poin · Level ${unlocked}${unlocked === 5 ? " (maksimum)" : ""}. ${success ? "" : "Bangun tidak memberi bonus."}</p><button id="again" class="primary">Ulang Level ${run.level}</button>${unlocked > run.level ? `<button id="next-level" class="primary">Main Level ${unlocked} · ${format(configFor(unlocked).duration)}</button>` : ""}<button id="back-home" class="secondary">Kembali ke hutan</button>`,
   );
   $("#again").onclick = () => {
     modal.close();
-    start();
+    start(run.level);
   };
+  if (unlocked > run.level)
+    $("#next-level").onclick = () => {
+      modal.close();
+      start(unlocked);
+    };
   $("#back-home").onclick = home;
+  refreshProfile();
 }
-modal.addEventListener("cancel", (e) => {
-  if (state === "result") {
-    e.preventDefault();
-    home();
-  }
-});
 function updateHUD() {
   $("#sleep-label").textContent = sleepLabel(run.sleep);
   $("#sleep-fill").style.width = `${run.sleep}%`;
-  $("#sleep-number").textContent = Math.ceil(run.sleep).toString();
   $("#sleep-fill").classList.toggle("danger", run.sleep < 25);
+  $(".sleep-track").setAttribute(
+    "aria-valuenow",
+    Math.ceil(run.sleep).toString(),
+  );
+  $("#sleep-number").textContent = Math.ceil(run.sleep).toString();
   $("#risk").textContent =
     run.sleep < 25
       ? "Gimmy gelisah. Cari makanan!"
-      : "Jaga agar mimpinya tetap hangat";
-  $("#timer").textContent = format(run.seconds);
-  const next = run.paid + 1;
+      : "Jaga mimpinya sampai waktu habis";
+  $("#timer").textContent = format(run.remaining);
+  $("#timer").classList.toggle(
+    "urgent",
+    run.remaining <= configFor(run.level).duration * 0.2,
+  );
   $("#next-reward").textContent =
-    `${Math.ceil(next * 30 - run.seconds)} dtk → +${[0, 10, 20, 30, 50][Math.min(next, 4)]} poin`;
-  $("#run-points span").textContent = run.points.toString();
+    run.paid >= 4
+      ? "Sleep Chain selesai!"
+      : `${format((run.duration * (run.paid + 1)) / 4 - run.seconds)} lagi → +5 poin`;
+  $("#run-points strong").textContent = progress.xp.toString();
+  $("#earned").textContent = `+${run.points} sesi ini`;
+  $("#milestones")
+    .querySelectorAll("i")
+    .forEach((e, i) => e.classList.toggle("paid", i < run.paid));
 }
-function spawn(type: Entity["type"]) {
+function spawn(type: Kind, lifetime = 6, lane = Math.floor(Math.random() * 3)) {
+  const w = $("#shell").clientWidth,
+    mobile = w < 600,
+    wide = w > 1100;
+  const xs = mobile ? [18, 50, 82] : wide ? [40, 57, 74] : [35, 58, 80];
+  const x = type === "frog" ? (mobile ? 80 : 76) : xs[lane],
+    y =
+      type === "frog"
+        ? 66
+        : type === "leaf"
+          ? mobile
+            ? 39
+            : 31
+          : mobile
+            ? 47
+            : 40;
   const el = document.createElement("button");
   el.className = `entity ${type}`;
+  el.innerHTML = `${icons[type]}<span class="entity-time"></span>`;
   const e: Entity = {
     id: ++serial,
     type,
-    x: type === "frog" ? 76 : 20 + Math.random() * 60,
-    y: type === "leaf" ? 25 : type === "frog" ? 68 : 30 + Math.random() * 17,
-    life: 0,
-    max:
-      type === "leaf" ? 7 : type === "frog" ? 6 : type === "cricket" ? 9 : 12,
+    x,
+    y,
+    startX: x,
+    startY: y,
+    born: run.seconds,
+    due: run.seconds + lifetime,
+    max: lifetime,
     el,
     used: false,
   };
-  el.innerHTML = `${icons[type]}<span class="entity-time"></span>`;
   el.setAttribute(
     "aria-label",
     type === "leaf"
@@ -337,18 +395,14 @@ function spawn(type: Entity["type"]) {
         ? "Katak — ketuk ranting"
         : `Beri makan ${bugNames[type]}`,
   );
-  if (type === "leaf") el.setAttribute("aria-label", "Usir daun");
   $("#objects").append(el);
   entities.push(e);
   if (type === "frog") {
     $("#branch").hidden = false;
-    $("#hint").textContent =
-      "Katak mau bernyanyi! Ketuk ranting untuk mengalihkannya.";
+    $("#hint").textContent = "Katak mau bernyanyi. Ketuk ranting!";
   } else if (type === "leaf")
-    $("#hint").textContent = "Daun jatuh! Geser menjauh dari sarang.";
-  else if (run.seconds < 12)
     $("#hint").textContent =
-      "Ngengat datang. Ketuk, atau geser ke sarang Gimmy.";
+      "Geser daun menjauh, atau ketuk lalu pilih arah buang.";
   el.onpointerdown = (ev) => {
     if (state !== "playing" || drag) return;
     ev.preventDefault();
@@ -365,16 +419,17 @@ function spawn(type: Entity["type"]) {
   };
   el.onpointermove = (ev) => {
     if (!drag || drag.entity !== e || drag.pointer !== ev.pointerId) return;
-    const rect = $("#stage").getBoundingClientRect();
     if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) > 8)
       drag.moved = true;
     if (drag.moved) {
-      e.x = ((ev.clientX - rect.left) / rect.width) * 100;
-      e.y = ((ev.clientY - rect.top) / rect.height) * 100;
+      const r = $("#stage").getBoundingClientRect();
+      e.x = ((ev.clientX - r.left) / r.width) * 100;
+      e.y = ((ev.clientY - r.top) / r.height) * 100;
       position(e);
     }
   };
   el.onpointerup = (ev) => {
+    syncInputTime();
     if (!drag || drag.entity !== e || drag.pointer !== ev.pointerId) return;
     const d = drag;
     drag = null;
@@ -382,42 +437,68 @@ function spawn(type: Entity["type"]) {
     idle = 0;
     if (type === "leaf") {
       if (
-        Math.hypot(ev.clientX - d.x, ev.clientY - d.y) > 45 &&
-        (e.x < 12 ||
-          e.x > 85 ||
-          e.y < 20 ||
-          e.y > 82 ||
-          Math.hypot(e.x - 44, e.y - 58) > 35)
-      )
+        d.moved &&
+        Math.hypot(ev.clientX - d.x, ev.clientY - d.y) > 40 &&
+        Math.hypot(e.x - 47, e.y - 58) >
+          Math.hypot(e.startX - 47, e.startY - 58)
+      ) {
         resolve(e, true);
-      else toast("Geser daun menjauh dari sarang.");
-    } else if (type === "frog") {
-      toast("Ketuk tombol ranting di bawah sarang.");
-    } else if (!d.moved || (e.x > 15 && e.x < 76 && e.y > 46 && e.y < 75)) {
+      } else if (!d.moved) {
+        leafActions(e);
+      } else toast("Geser menjauh dari sarang.");
+    } else if (type === "frog") toast("Ketuk ranting untuk mengalihkan katak.");
+    else if (!d.moved || (e.x > 15 && e.x < 80 && e.y > 45 && e.y < 76))
       resolve(e, true);
-    } else {
-      e.x = 20 + Math.random() * 60;
-      e.y = 35;
-    }
   };
   el.onpointercancel = cancelDrag;
   el.onlostpointercapture = () => {
     if (drag?.entity === e) cancelDrag();
   };
   el.onclick = (ev) => {
+    syncInputTime();
     if (ev.detail === 0 && state === "playing") {
-      if (type === "frog")
-        toast("Pilih tombol ranting untuk mengalihkan katak.");
+      if (type === "frog") toast("Pilih tombol ranting.");
       else resolve(e, true);
     }
   };
   position(e);
   return e;
 }
+function leafActions(e: Entity) {
+  document.querySelector(".leaf-actions")?.remove();
+  const panel = document.createElement("div");
+  panel.className = "leaf-actions";
+  panel.dataset.leafActions = e.id.toString();
+  panel.style.left = `${e.x}%`;
+  panel.style.top = `${e.y}%`;
+  panel.innerHTML =
+    '<button aria-label="Buang daun ke kiri">← Buang</button><button aria-label="Buang daun ke kanan">Buang →</button>';
+  $("#objects").append(panel);
+  panel.querySelectorAll("button").forEach((b) => {
+    b.onclick = () => {
+      syncInputTime();
+      resolve(e, true);
+    };
+  });
+}
+function syncInputTime() {
+  if (state === "playing") {
+    const now = performance.now(),
+      dt = (now - last) / 1000;
+    last = now;
+    if (dt > 2) pause();
+    else if (dt > 0) simulate(dt);
+  }
+}
+
 function position(e: Entity) {
   e.el.style.left = `${e.x}%`;
   e.el.style.top = `${e.y}%`;
-  e.el.style.setProperty("--life", `${Math.max(0, 1 - e.life / e.max) * 100}%`);
+  e.el.style.setProperty(
+    "--life",
+    `${Math.max(0, (e.due - run.seconds) / e.max) * 100}%`,
+  );
+  e.el.classList.toggle("imminent", e.due - run.seconds < 1.3);
 }
 function cancelDrag() {
   if (drag) {
@@ -427,19 +508,11 @@ function cancelDrag() {
 }
 function resolve(e: Entity, success: boolean) {
   if (e.used || state !== "playing") return;
-  e.used = true;
-  e.el.remove();
-  entities = entities.filter((x) => x !== e);
-  if (drag?.entity === e) cancelDrag();
-  if (e.type === "frog") $("#branch").hidden = true;
+  remove(e);
   if (success) {
     if (e.type === "leaf" || e.type === "frog") {
-      toast(
-        e.type === "leaf"
-          ? "Daun tersapu. Mimpinya aman."
-          : "Katak pergi mengikuti bunyi ranting.",
-      );
       tone(330);
+      $("#hint").textContent = "Mimpinya aman. Tetap perhatikan hutan.";
     } else {
       run.change(foodValue[e.type]);
       progress.bugs[e.type]++;
@@ -447,50 +520,117 @@ function resolve(e: Entity, success: boolean) {
       toast(`${bugNames[e.type]} · +${foodValue[e.type]} Sleep`);
       tone(520);
     }
-  } else if (e.type === "leaf" || e.type === "frog" || e.type === "cricket") {
-    const damage = e.type === "leaf" ? 10 : e.type === "frog" ? 15 : 5;
-    run.change(-damage);
-    toast(`Hutan berisik · −${damage} Sleep`);
   }
-  if (run.awake) wake();
   updateHUD();
 }
-$("#branch").onclick = () => {
-  const frog = entities.find((e) => e.type === "frog");
-  if (frog) resolve(frog, true);
-};
-$("#play").onclick = () => settings(true);
-$("#settings").onclick = () => {
-  if (state === "playing") {
-    pause();
-    return;
+// Advance to each impact timestamp before banking a checkpoint or completing the run.
+function simulate(dt: number) {
+  let remaining = dt;
+  while (remaining > 1e-8 && state === "playing") {
+    for (const req of director.update(run.seconds, entities))
+      spawn(req.type, req.lifetime, req.lane);
+    const due = Math.min(run.duration, ...entities.map((e) => e.due));
+    const step = Math.max(
+      0,
+      Math.min(remaining, 1 / 60, due - run.seconds, run.remaining),
+    );
+    const end = run.seconds + step;
+    const impacts = entities.filter((e) => e.due <= end + 1e-8);
+    const damage = impacts.reduce(
+      (sum, e) =>
+        sum +
+        (e.type in damageFor ? damageFor[e.type as keyof typeof damageFor] : 0),
+      0,
+    );
+    for (const e of impacts) remove(e);
+    run.step(step, damage);
+    remaining -= step;
+    idle += step;
+    if (damage) {
+      hitTimes = hitTimes.filter((t) => run.seconds - t <= 1);
+      hitTimes.push(run.seconds);
+      if (hitTimes.length >= 2)
+        director.nextThreat = Math.max(director.nextThreat, run.seconds + 0.8);
+      toast(`Hutan berisik · −${damage} Sleep`);
+    }
+    for (const e of entities) {
+      if (drag?.entity !== e) {
+        const t = Math.min(1, (run.seconds - e.born) / e.max);
+        if (e.type === "leaf") {
+          e.x = e.startX + (47 - e.startX) * t;
+          e.y = e.startY + (62 - e.startY) * t;
+        } else if (e.type === "cricket") {
+          e.x = e.startX + (55 - e.startX) * t;
+          e.y = e.startY + 12 * t;
+        } else if (e.type !== "frog")
+          e.x = e.startX + Math.sin((run.seconds - e.born) * 1.5 + e.id) * 3;
+      }
+      position(e);
+    }
+    if (run.outcome !== "playing") {
+      updateHUD();
+      finish();
+      break;
+    }
+    if (step === 0 && !impacts.length) break;
   }
-  settings();
+  updateHUD();
+}
+function layoutScene() {
+  const w = $("#shell").clientWidth,
+    h = $("#shell").clientHeight,
+    scale = Math.max(w / 2096, h / 1098),
+    bw = 2096 * scale,
+    bh = 1098 * scale;
+  const focal = 0.47,
+    left = (w - bw) * focal,
+    top = (h - bh) * 0.5;
+  const x = left + bw * 0.47,
+    y = top + bh * 0.56;
+  const a = $("#character-anchor");
+  const ch = Math.min(h * 0.34, 330),
+    cw = Math.min(w * 0.8, ch * 2.1);
+  a.style.cssText = `left:${x}px;top:${y}px;width:${cw}px;height:${ch}px`;
+  $("#stage").style.transformOrigin = `${x}px ${y}px`;
+  scene?.resize();
+}
+$("#play").onclick = () => settings(true);
+$("#profile").onclick = chooseLevel;
+$("#level-choice").onclick = chooseLevel;
+$("#settings").onclick = () => {
+  if (state !== "waking" && state !== "result") settings();
 };
-$("#map-select").onclick = chooseMap;
+$("#map-select").onclick = () =>
+  dialog(
+    "Forest",
+    `<p>Hutan pertama Gimmy. Lima level Sleep Challenge memakai peta ini.</p><div class="notice">Level 4 dan 5 sama-sama 00:30. Level 5 menghadirkan gangguan lebih rapat dan cepat.</div>`,
+  );
 $("#book").onclick = book;
 $("#how").onclick = help;
 $("#pause").onclick = pause;
+$("#branch").onclick = () => {
+  syncInputTime();
+  const e = entities.find((e) => e.type === "frog");
+  if (e) resolve(e, true);
+};
 $(".wordmark").onclick = (ev) => {
   ev.preventDefault();
-  if (state === "playing") pause();
+  if (state === "playing" || state === "ready") pause();
   else if (state === "home") home();
 };
-$("#bed").onclick = () =>
-  dialog(
-    "Sarang daun pertama",
-    `<div class="bed-preview">☾</div><p>Sarang hangat dari ranting dan daun hutan. Rumah pertama Gimmy, dan awal dari semua mimpinya.</p><div class="notice">Sarang awal aktif · tanpa bonus statistik.<br>Variasi sarang akan hadir pada pengembangan berikutnya.</div>`,
-  );
-document.addEventListener("pointerdown", () => {
-  idle = 0;
+modal.addEventListener("cancel", (e) => {
+  if (state === "result") {
+    e.preventDefault();
+    home();
+  }
 });
+document.addEventListener("pointerdown", () => (idle = 0));
 document.addEventListener("keydown", (ev) => {
   idle = 0;
   if (
-    (ev.code === "Escape" ||
-      (ev.code === "Space" && !(ev.target instanceof HTMLButtonElement))) &&
+    ev.code === "Escape" &&
     !modal.open &&
-    state === "playing"
+    (state === "playing" || state === "ready")
   ) {
     ev.preventDefault();
     pause();
@@ -499,92 +639,68 @@ document.addEventListener("keydown", (ev) => {
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) pause();
 });
-window.addEventListener("blur", () => pause());
-window.addEventListener("resize", () => scene?.resize());
+window.addEventListener("blur", pause);
+window.addEventListener("resize", layoutScene);
 function tick(now: number) {
-  const dt = Math.min((now - last) / 1000, 0.1);
+  let dt = Math.max(0, (now - last) / 1000);
   last = now;
   requestAnimationFrame(tick);
   if (document.hidden) return;
-  if (state === "playing") {
-    idle += dt;
-    run.step(dt, map === "rainforest" ? 1.2 : 1);
-    if (!run.awake)
-      scene?.play(run.sleep < 25 ? "Sleep Idle 2" : "Sleeping Idle");
-    if (run.awake) wake();
-    else {
-      if (run.seconds >= spawnAt) {
-        spawn(
-          run.seconds < 20
-            ? "moth"
-            : (["moth", "cricket", "beetle"] as Bug[])[
-                Math.floor(Math.random() * 3)
-              ],
-        );
-        spawnAt = run.seconds + 5 + Math.random() * 3;
-      }
-      if (run.seconds >= hazardAt) {
-        spawn("leaf");
-        hazardAt =
-          run.seconds + (map === "rainforest" ? 8 : 14) + Math.random() * 5;
-      }
-      if (run.seconds >= frogAt) {
-        spawn("frog");
-        frogAt = run.seconds + 25 + Math.random() * 10;
-      }
-      for (const e of [...entities]) {
-        e.life += dt;
-        if (drag?.entity !== e) {
-          if (e.type === "leaf") e.y += dt * 4;
-          else if (e.type !== "frog")
-            e.x += Math.sin(e.life * 1.8 + e.id) * dt * 2;
-        }
-        position(e);
-        if (e.life >= e.max) resolve(e, false);
-      }
-      updateHUD();
-    }
+  if (dt > 2 && (state === "playing" || state === "ready")) {
+    pause();
+    dt = 0;
   }
-  if (state === "waking") {
+  if (state === "ready") {
+    readyTime -= dt;
+    $("#ready-cue").textContent = Math.max(1, Math.ceil(readyTime)).toString();
+    if (readyTime <= 0) {
+      $("#ready-cue").hidden = true;
+      state = "playing";
+      tone(500);
+    }
+  } else if (state === "playing") {
+    simulate(dt);
+    if (state === "playing")
+      scene?.play(run.sleep < 25 ? "Sleep Idle 2" : "Sleeping Idle");
+  } else if (state === "waking") {
     wakeTime += dt;
-    if (wakeTime > 2.7) results();
+    if (wakeTime > 2.3) results();
   }
   if (state === "playing" || state === "waking")
     $("#stage").style.transform =
-      `scale(${camera.update(run.sleep, idle, !!drag, dt, progress.reduced)})`;
+      `scale(${camera.update(run.sleep, idle, !!drag, Math.min(dt, 0.1), progress.reduced)})`;
   frame += dt;
   const interval = progress.quality === "low" ? 1 / 30 : 1 / 60;
   if (frame >= interval) {
-    scene?.render(frame, state !== "paused" && state !== "result");
+    scene?.render(
+      Math.min(frame, 0.15),
+      state !== "paused" && state !== "result",
+    );
     frame = 0;
   }
 }
 refreshProfile();
 applyQuality();
-setMap("forest");
+layoutScene();
+save();
 async function load() {
   try {
-    scene ??= new GimmyScene($<HTMLCanvasElement>("#gimmy"), progress.quality);
+    scene = new GimmyScene($<HTMLCanvasElement>("#gimmy"), progress.quality);
     await scene.load();
+    layoutScene();
     ready = true;
     $<HTMLButtonElement>("#play").disabled = false;
-    $("#play").textContent = "Mulai bermimpi  →";
     $("#load-note").textContent = "Pilih kualitas visual sebelum bermain";
-  } catch (error) {
-    console.error(error);
+  } catch (e) {
+    console.error(e);
     $("#load-note").textContent =
-      "Model belum dapat dimuat. Periksa WebGL atau coba lagi.";
-    $("#play").textContent = "Coba muat ulang";
+      "Model gagal dimuat. Ketuk Play untuk mencoba lagi.";
     $<HTMLButtonElement>("#play").disabled = false;
     $("#play").onclick = () => location.reload();
   }
 }
 void load();
 requestAnimationFrame(tick);
-if (!storageOK)
-  toast(
-    "Penyimpanan tidak tersedia. Progres hanya bertahan selama halaman ini terbuka.",
-  );
 if (import.meta.env.DEV)
   Object.assign(window, {
     __gimmy: {
@@ -594,22 +710,24 @@ if (import.meta.env.DEV)
           ready,
           sleep: run.sleep,
           seconds: run.seconds,
+          remaining: run.remaining,
+          outcome: run.outcome,
           points: run.points,
           xp: progress.xp,
           level: levelFor(progress.xp),
-          map,
+          runLevel: run.level,
           zoom: camera.zoom,
           drag: !!drag,
-          entities: entities.map((e) => ({ id: e.id, type: e.type })),
+          entities: entities.map((e) => ({
+            id: e.id,
+            type: e.type,
+            due: e.due,
+          })),
         };
       },
-      step(seconds: number) {
-        for (let i = 0; i < seconds * 10 && state === "playing"; i++) {
-          run.step(0.1);
-          if (run.awake) wake();
-        }
-        updateHUD();
-      },
+      start,
+      home,
+      spawn,
       feed() {
         run.change(100);
       },
@@ -619,12 +737,31 @@ if (import.meta.env.DEV)
       setIdle(n: number) {
         idle = n;
       },
-      spawn,
+      step(seconds: number, perfect = false) {
+        while (seconds > 0 && state === "playing") {
+          if (perfect) {
+            run.change(100);
+            for (const e of [...entities]) resolve(e, true);
+          }
+          simulate(Math.min(0.1, seconds));
+          seconds -= 0.1;
+        }
+      },
+      skipReady() {
+        if (state === "ready") {
+          state = "playing";
+          $("#ready-cue").hidden = true;
+        }
+      },
+      setPoints(n: number) {
+        progress.xp = n;
+        selected = levelFor(n);
+        save();
+        refreshProfile();
+      },
       wake() {
         run.change(-100);
-        wake();
+        finish();
       },
-      start,
-      home,
     },
   });

@@ -1,8 +1,12 @@
+export { levelFor } from "./levels";
 export type Quality = "low" | "medium" | "high";
 export type MapId = "forest" | "rainforest";
 export type Bug = "moth" | "cricket" | "beetle";
 export interface Progress {
   xp: number;
+  completed?: number[];
+  receipt?: { id: string; paid: number };
+  legacyRainforestUnlocked?: boolean;
   best: number;
   bugs: Record<Bug, number>;
   quality: Quality;
@@ -17,9 +21,7 @@ export const freshProgress = (): Progress => ({
   sound: true,
   reduced: matchMedia("(prefers-reduced-motion: reduce)").matches,
 });
-export const levelFor = (xp: number) => 1 + Math.floor(xp / 100);
-export const rewardAt = (milestone: number) =>
-  [0, 10, 20, 30, 50][Math.min(milestone, 4)];
+
 export const sleepLabel = (v: number) =>
   v >= 80
     ? "Deep sleep"
@@ -40,34 +42,6 @@ export const bugNames: Record<Bug, string> = {
   cricket: "Jangkrik",
   beetle: "Kumbang",
 };
-export class SleepRun {
-  sleep = 80;
-  seconds = 0;
-  points = 0;
-  paid = 0;
-  awake = false;
-  constructor(public bank: (points: number) => void) {}
-  step(dt: number, drain = 1) {
-    if (this.awake || !Number.isFinite(dt) || dt <= 0) return;
-    const elapsed = Math.min(dt, this.sleep / drain);
-    this.seconds += elapsed;
-    const milestone = Math.floor((this.seconds + 1e-8) / 30);
-    while (this.paid < milestone) {
-      const points = rewardAt(++this.paid);
-      this.points += points;
-      this.bank(points);
-    }
-    this.change(-elapsed * drain);
-  }
-  change(amount: number) {
-    if (this.awake) return;
-    this.sleep = Math.max(0, Math.min(100, this.sleep + amount));
-    if (this.sleep <= 0.000001) {
-      this.sleep = 0;
-      this.awake = true;
-    }
-  }
-}
 export class CameraDirector {
   danger = false;
   zoom = 1;
@@ -109,6 +83,25 @@ export function restoreProgress(
         : 0;
     return {
       xp: safe(p.xp),
+      completed: Array.isArray(p.completed)
+        ? [
+            ...new Set<number>(
+              p.completed.filter(
+                (n: unknown) =>
+                  typeof n === "number" &&
+                  Number.isInteger(n) &&
+                  n >= 1 &&
+                  n <= 5,
+              ),
+            ),
+          ]
+        : [],
+      receipt:
+        typeof p.receipt?.id === "string"
+          ? { id: p.receipt.id, paid: Math.min(4, safe(p.receipt.paid)) }
+          : undefined,
+      legacyRainforestUnlocked:
+        p.legacyRainforestUnlocked === true || safe(p.xp) >= 100,
       best: safe(p.best),
       bugs: {
         moth: safe(p.bugs?.moth),
