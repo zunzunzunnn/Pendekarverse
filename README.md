@@ -1,6 +1,6 @@
 # Gimmy : The Little Tarsius
 
-Game menjaga tidur dalam scene 2.5D. Jaga Sleep di atas nol sampai countdown mencapai 00:00. Karakter memakai rig dan animasi Gimmy; UI dan latar baru berasal dari aset proyek.
+Game menjaga tidur dalam scene 2.5D. Jaga Sleep di atas nol sampai countdown mencapai 00:00. Gimmy memakai rangkaian gambar animasi Sleep 01–05 dari proyek, dipadukan dengan bed 3D dan background pilihan.
 
 ## Cara bermain
 
@@ -35,6 +35,7 @@ Dengan Chrome terpasang dan server lokal port 5187 aktif:
 
 ```sh
 node tests/gimmy-gameplay.mjs
+node tests/gimmy-assets-gameplay.mjs
 ```
 
 GitHub Pages dibangun dari main melalui `.github/workflows/pages.yml`. Base relatif mendukung URL repository. Diagnostic hooks hanya tersedia saat development.
@@ -43,8 +44,10 @@ GitHub Pages dibangun dari main melalui `.github/workflows/pages.yml`. Base rela
 
 Header/H1/H2 menggunakan Slackey; body, label dan angka menggunakan Sniglet Regular. Font di-host lokal; lisensi ada di public/gimmy/fonts. Semua tombol utama menggunakan salinan runtime aset PNG pengguna. Poin berada di atas Sleep Chain; Sleep Meter berada di bawah.
 
-Save v1 dibaca dan dimigrasikan ke `gimmy.progress.v2`: XP, koleksi, pengaturan dan rekor lama dipertahankan. Level terbuka dihitung dari poin. Versi challenge ini memakai Forest; status unlock Rainforest lama tetap disimpan untuk integrasi map berikutnya. Tidak ada akun atau sinkronisasi cloud.
+Save v1/v2 dibaca dan dimigrasikan ke `gimmy.progress.v3`: XP, koleksi, pengaturan, receipt milestone dan rekor lama dipertahankan. Pilihan bed/map ikut tersimpan. Jika save baru rusak, game membaca save lama yang valid. Tidak ada akun atau sinkronisasi cloud.
 
-Lihat [rencana](GIMMY_IMPROVEMENT_PLAN.md) dan [laporan implementasi](GIMMY_V3_REPORT.md). Tekstur tubuh final dan ekspresi mata tertutup masih menyusul; warna karakter serta ikon obstacle masih aset sementara. Pengujian ponsel menggunakan emulasi, belum performance sign-off perangkat fisik.
+My Bed menyediakan Daun/Ranting/Goa/Kasur/Hamok; dunia menyediakan Forest/RainForest/Village/Tree Canopy/Dream World. Unlock pada 0/40/100/180/280 poin tanpa menghabiskan poin. Bed dan map bersifat visual; tantangan tidak berubah. Hak RainForest lama tetap berlaku. Bug Guide memuat sembilan artwork; makanan aktif ngengat/kumbang/jangkrik/kecoak, lima jenis lain ditandai belum tersedia. Ngengat/kecoak memakai animasi pada kualitas Seimbang/Tinggi; Ringan memakai PNG dan gerak sederhana.
+
+Lihat [rencana integrasi](GIMMY_ASSET_INTEGRATION_PLAN.md) dan [laporan 0.4.0](GIMMY_V4_REPORT.md). Bed dimuat satu per satu; animasi tidur Ringan memakai atlas kecil 8 FPS, kualitas lain atlas 12 FPS. Kurangi gerakan menampilkan pose statis dan menonaktifkan zoom. Gambar statis tetap tampil jika atlas animasi gagal dimuat. Ekspresi tidur/mata tertutup berasal dari aset pengguna. Daun dan katak masih ilustrasi prototype. Pengujian ponsel menggunakan emulasi, belum performance sign-off perangkat fisik. Layout Figma belum diaudit karena meminta login; UI mengikuti desain game sebelumnya.
 
 Pendekarverse lama tetap tersimpan dalam riwayat Git dan [dokumentasi legacy](PENDEKARVERSE_LEGACY.md).

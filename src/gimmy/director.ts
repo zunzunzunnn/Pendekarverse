@@ -4,7 +4,7 @@ export interface Threat {
   due: number;
 }
 export interface SpawnRequest {
-  type: ObstacleKind | "moth" | "beetle";
+  type: ObstacleKind | "moth" | "beetle" | "cockroach";
   lifetime: number;
   lane: number;
 }
@@ -75,12 +75,15 @@ export class ObstacleDirector {
     if (time >= this.nextFood) {
       this.nextFood = time + c.food;
       if (
-        active.filter((e) => e.type === "moth" || e.type === "beetle").length <
-          2 &&
+        active.filter((e) => ["moth", "beetle", "cockroach"].includes(e.type))
+          .length < 2 &&
         time < c.duration - 2
       )
         out.push({
-          type: this.random() < 0.75 ? "moth" : "beetle",
+          type: (() => {
+            const roll = this.random();
+            return roll < 0.6 ? "moth" : roll < 0.85 ? "beetle" : "cockroach";
+          })(),
           lifetime: 6,
           lane: Math.floor(this.random() * 3),
         });

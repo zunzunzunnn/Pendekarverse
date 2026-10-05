@@ -11,7 +11,7 @@ import { credit } from "../src/gimmy/storage";
 const fallback: Progress = {
   xp: 0,
   best: 0,
-  bugs: { moth: 0, cricket: 0, beetle: 0 },
+  bugs: { moth: 0, cricket: 0, beetle: 0, cockroach: 0 },
   quality: "low",
   sound: true,
   reduced: false,

@@ -1,0 +1,107 @@
+{
+  "sleep1": {
+    "width": 384,
+    "height": 216,
+    "count": 125,
+    "cols": 8,
+    "fps": 12,
+    "sourceFrames": 249,
+    "low": {
+      "width": 192,
+      "height": 108,
+      "count": 83,
+      "cols": 8,
+      "fps": 8
+    }
+  },
+  "sleep2": {
+    "width": 384,
+    "height": 216,
+    "count": 192,
+    "cols": 8,
+    "fps": 12,
+    "sourceFrames": 384,
+    "low": {
+      "width": 192,
+      "height": 108,
+      "count": 128,
+      "cols": 8,
+      "fps": 8
+    }
+  },
+  "sleep3": {
+    "width": 384,
+    "height": 216,
+    "count": 131,
+    "cols": 8,
+    "fps": 12,
+    "sourceFrames": 261,
+    "low": {
+      "width": 192,
+      "height": 108,
+      "count": 87,
+      "cols": 8,
+      "fps": 8
+    }
+  },
+  "sleep4": {
+    "width": 384,
+    "height": 216,
+    "count": 192,
+    "cols": 8,
+    "fps": 12,
+    "sourceFrames": 384,
+    "low": {
+      "width": 192,
+      "height": 108,
+      "count": 128,
+      "cols": 8,
+      "fps": 8
+    }
+  },
+  "sleep5": {
+    "width": 384,
+    "height": 216,
+    "count": 192,
+    "cols": 8,
+    "fps": 12,
+    "sourceFrames": 384,
+    "low": {
+      "width": 192,
+      "height": 108,
+      "count": 128,
+      "cols": 8,
+      "fps": 8
+    }
+  },
+  "moth-animation": {
+    "width": 160,
+    "height": 90,
+    "count": 100,
+    "cols": 8,
+    "fps": 12,
+    "sourceFrames": 199,
+    "low": {
+      "width": 96,
+      "height": 54,
+      "count": 67,
+      "cols": 8,
+      "fps": 8
+    }
+  },
+  "cockroach-animation": {
+    "width": 160,
+    "height": 90,
+    "count": 45,
+    "cols": 8,
+    "fps": 12,
+    "sourceFrames": 90,
+    "low": {
+      "width": 96,
+      "height": 54,
+      "count": 30,
+      "cols": 8,
+      "fps": 8
+    }
+  }
+}

@@ -132,12 +132,12 @@ try {
   check((await snap()).xp === 40, "v2 persists after reload");
   await p.evaluate(() => window.__gimmy.setPoints(280));
   for (let level = 1; level <= 5; level++) {
-    await p.evaluate((level) => {
+    const r = await p.evaluate((level) => {
       window.__gimmy.home();
       window.__gimmy.start(level);
       window.__gimmy.skipReady();
+      return window.__gimmy.snapshot;
     }, level);
-    const r = await snap();
     check(
       r.remaining === [120, 90, 60, 30, 30][level - 1],
       `level ${level} duration`,

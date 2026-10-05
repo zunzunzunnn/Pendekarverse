@@ -1,7 +1,14 @@
 export { levelFor } from "./levels";
+import {
+  BEDS,
+  MAPS,
+  mapUnlocked,
+  type BedId,
+  type WorldId,
+} from "./collections";
 export type Quality = "low" | "medium" | "high";
 export type MapId = "forest" | "rainforest";
-export type Bug = "moth" | "cricket" | "beetle";
+export type Bug = "moth" | "cricket" | "beetle" | "cockroach";
 export interface Progress {
   xp: number;
   completed?: number[];
@@ -12,11 +19,15 @@ export interface Progress {
   quality: Quality;
   sound: boolean;
   reduced: boolean;
+  selectedBed?: BedId;
+  selectedMap?: WorldId;
 }
 export const freshProgress = (): Progress => ({
   xp: 0,
   best: 0,
-  bugs: { moth: 0, cricket: 0, beetle: 0 },
+  bugs: { moth: 0, cricket: 0, beetle: 0, cockroach: 0 },
+  selectedBed: "daun",
+  selectedMap: "forest",
   quality: matchMedia("(pointer: coarse)").matches ? "low" : "medium",
   sound: true,
   reduced: matchMedia("(prefers-reduced-motion: reduce)").matches,
@@ -36,11 +47,13 @@ export const foodValue: Record<Bug, number> = {
   moth: 10,
   cricket: 15,
   beetle: 20,
+  cockroach: 10,
 };
 export const bugNames: Record<Bug, string> = {
   moth: "Ngengat",
   cricket: "Jangkrik",
   beetle: "Kumbang",
+  cockroach: "Kecoak",
 };
 export class CameraDirector {
   danger = false;
@@ -107,7 +120,17 @@ export function restoreProgress(
         moth: safe(p.bugs?.moth),
         cricket: safe(p.bugs?.cricket),
         beetle: safe(p.bugs?.beetle),
+        cockroach: safe(p.bugs?.cockroach),
       },
+      selectedBed:
+        BEDS.find((b) => b.id === p.selectedBed && safe(p.xp) >= b.threshold)
+          ?.id ?? "daun",
+      selectedMap:
+        MAPS.find(
+          (m) =>
+            m.id === p.selectedMap &&
+            mapUnlocked(m.id, safe(p.xp), p.legacyRainforestUnlocked === true),
+        )?.id ?? "forest",
       quality: ["low", "medium", "high"].includes(p.quality)
         ? p.quality
         : fallback.quality,

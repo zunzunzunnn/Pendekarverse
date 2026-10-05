@@ -14,10 +14,38 @@ import { CountdownRun } from "./countdown";
 import { ObstacleDirector } from "./director";
 import { SAVE_KEY, loadProgress, credit } from "./storage";
 import { icons } from "./icons";
+import {
+  BEDS,
+  MAPS,
+  BUG_ART,
+  EXTRA_BUG_NAMES,
+  mapUnlocked,
+  type BedId,
+  type WorldId,
+} from "./collections";
+import { loadSprite, drawSprite, type SpriteName } from "./sprites";
 const $ = <T extends HTMLElement = HTMLElement>(s: string) =>
   document.querySelector<T>(s)!;
 const base = import.meta.env.BASE_URL,
   asset = (name: string) => `${base}gimmy/ui/${name}.webp`;
+const animatedBugs = new Map<SpriteName, HTMLImageElement>();
+function bugArt(type: string, animate = false) {
+  if (!BUG_ART.includes(type as (typeof BUG_ART)[number]))
+    return icons[type as keyof typeof icons] ?? "";
+  const name =
+    type === "moth"
+      ? "moth-animation"
+      : type === "cockroach"
+        ? "cockroach-animation"
+        : null;
+  if (animate && name && progress.quality !== "low" && !progress.reduced) {
+    void loadSprite(name)
+      .then((img) => animatedBugs.set(name, img))
+      .catch(() => {});
+    return `<img class="bug-art" src="${base}gimmy/bugs/${type}.webp" alt=""/><canvas class="bug-animation" data-sprite="${name}" hidden></canvas>`;
+  }
+  return `<img class="bug-art" src="${base}gimmy/bugs/${type}.webp" alt=""/>`;
+}
 let progress = freshProgress(),
   storageOK = true;
 try {
@@ -90,7 +118,7 @@ $("#app").innerHTML = `<main id="shell">
  <section id="home"><img class="logo" src="${base}gimmy/logo.webp" alt="Gimmy : The Little Tarsius"/><div class="home-copy"><h1>Jaga mimpi kecilnya.</h1><p>Redakan riuh hutan. Bertahan sampai 00:00.</p><button id="play" class="art-button" aria-label="Play" disabled><img src="${asset("play")}" alt="Play"/></button><small id="load-note" role="status">Menyiapkan Gimmy…</small><button id="level-choice" class="text-button">Pilih tantangan</button></div></section>
  <section id="hud" hidden><div class="chain-stack"><div id="run-points"><span>✦ Poin tersimpan</span><strong>0</strong><small id="earned">+0 sesi ini</small></div><div class="chain"><img src="${asset("chain")}" alt="Sleep Chain"/><strong id="timer">02:00</strong></div><small id="next-reward"></small><div id="milestones" aria-label="Milestone sesi"><i></i><i></i><i></i><i></i></div></div>
  <button id="pause" class="round-button" aria-label="Jeda permainan">Ⅱ</button><div id="hint" role="status"></div><button id="branch" hidden>♧ Ketuk ranting <small>Alihkan katak</small></button><div class="sleep-panel"><div><span>☾ SLEEP METER</span><strong id="sleep-label">Cozy</strong></div><div class="sleep-track" role="progressbar" aria-label="Sleep Meter" aria-valuemin="0" aria-valuemax="100"><i id="sleep-fill"></i></div><small><span id="sleep-number">80</span> / 100 <span id="risk">Jaga mimpinya sampai waktu habis</span></small></div></section>
- <nav id="home-nav"><button id="book" class="art-button" aria-label="Bug Guide"><img src="${asset("bugs")}" alt="Bug Guide"/></button><button id="how" class="art-button" aria-label="Cara bermain"><img src="${asset("info")}" alt="Info"/></button></nav>
+ <nav id="home-nav"><button id="book" class="art-button" aria-label="Bug Guide"><img src="${asset("bugs")}" alt="Bug Guide"/></button><button id="my-bed" class="collection-button" aria-label="My Bed">☾ <span>My Bed</span></button><button id="how" class="art-button" aria-label="Cara bermain"><img src="${asset("info")}" alt="Info"/></button></nav>
  <div id="ready-cue" hidden aria-live="polite"></div><footer><span>GIMMY · SLEEP CHALLENGE</span><span id="best"></span></footer>
  </main><div id="toast" role="status"></div><dialog id="dialog" aria-labelledby="dialog-title"></dialog>`;
 const modal = $<HTMLDialogElement>("#dialog");
@@ -189,7 +217,10 @@ function settings(preSleep = false) {
 function applyQuality() {
   document.body.dataset.quality = progress.quality;
   document.body.classList.toggle("reduced", progress.reduced);
-  scene?.quality(progress.quality);
+  if (scene) {
+    scene.reduced = progress.reduced;
+    scene.quality(progress.quality);
+  }
 }
 function help() {
   dialog(
@@ -200,7 +231,100 @@ function help() {
 function book() {
   dialog(
     "Bug Guide",
-    `<div class="bug-grid">${(["moth", "cricket", "beetle"] as Bug[]).map((t) => `<article><div>${icons[t]}</div><h3>${bugNames[t]}</h3><b>+${foodValue[t]} Sleep</b><p>${t === "cricket" ? "Tangkap sebelum berbunyi: terlambat −8 Sleep." : t === "moth" ? "Makanan tenang, mudah ditangkap." : "Lambat dan mengenyangkan."}</p><small>${progress.bugs[t]} ditemukan</small></article>`).join("")}</div><div class="notice">Daun mengenai sarang: −12 Sleep. Katak berbunyi: −18 Sleep. Bar kecil pada objek menunjukkan waktu sebelum pergi atau berdampak.</div>`,
+    `<div class="bug-grid">${BUG_ART.map((t) => {
+      const active = t in foodValue;
+      return `<article><div>${bugArt(t)}</div><h3>${bugNames[t as Bug] ?? EXTRA_BUG_NAMES[t]}</h3><b>${active ? `+${foodValue[t as Bug]} Sleep` : "Segera hadir"}</b><p>${t === "cricket" ? "Tangkap sebelum berbunyi: terlambat −8 Sleep." : active ? "Makanan untuk menjaga mimpi Gimmy." : "Belum muncul dalam permainan."}</p><small>${active ? `${progress.bugs[t as Bug]} ditemukan` : "Belum tersedia"}</small></article>`;
+    }).join(
+      "",
+    )}</div><div class="notice">Daun mengenai sarang: −12 Sleep. Katak berbunyi: −18 Sleep. Bar kecil pada objek menunjukkan waktu sebelum pergi atau berdampak.</div>`,
+  );
+}
+function refreshWorld() {
+  const map = MAPS.find((m) => m.id === (progress.selectedMap ?? "forest"))!;
+  $("#map-select").innerHTML =
+    `<img src="${base}gimmy/maps/${map.id}.webp" alt=""/><span>${map.name}<small>AKTIF</small></span>`;
+  $("#map-select").setAttribute("aria-label", `${map.name}, pilih peta`);
+  $(".forest-art").style.backgroundImage =
+    `url("${base}gimmy/maps/${map.id}.webp")`;
+  $("#my-bed").title =
+    `Bed ${BEDS.find((b) => b.id === (progress.selectedBed ?? "daun"))!.name}`;
+}
+function collectionLoading(loading: boolean) {
+  ready = !loading;
+  $<HTMLButtonElement>("#play").disabled = loading;
+  $<HTMLButtonElement>("#map-select").disabled = loading;
+  $<HTMLButtonElement>("#my-bed").disabled = loading;
+  $("#load-note").textContent = loading
+    ? "Menyiapkan tempat mimpi…"
+    : "Pilih kualitas visual sebelum bermain";
+}
+function chooseBed() {
+  if (state !== "home" || !ready) return;
+  dialog(
+    "My Bed",
+    `<p>Tempat tidur terbuka dari poin tersimpan. Semua bed memberi tantangan yang sama.</p><div class="collection-grid">${BEDS.map((b) => `<button data-bed="${b.id}" ${progress.xp < b.threshold ? "disabled" : ""} class="${progress.selectedBed === b.id ? "selected" : ""}"><img src="${base}gimmy/beds/${b.id}.webp" alt="Bed ${b.name}"/><strong>${b.name}</strong><small>${progress.xp < b.threshold ? `${progress.xp}/${b.threshold} poin` : progress.selectedBed === b.id ? "✓ Dipakai" : "Preview & pakai"}</small></button>`).join("")}</div><p id="collection-status" role="status">Pilih bed untuk melihatnya bersama Gimmy.</p>`,
+  );
+  modal.querySelectorAll<HTMLButtonElement>("[data-bed]").forEach(
+    (b) =>
+      (b.onclick = async () => {
+        if (!ready || !scene) return;
+        const id = b.dataset.bed as BedId;
+        if (id === progress.selectedBed) return;
+        collectionLoading(true);
+        modal
+          .querySelectorAll<HTMLButtonElement>("[data-bed]")
+          .forEach((x) => (x.disabled = true));
+        $("#collection-status").textContent = "Memuat bed…";
+        try {
+          await scene.load(id);
+          progress.selectedBed = id;
+          save();
+          refreshWorld();
+          layoutScene();
+          collectionLoading(false);
+          chooseBed();
+        } catch {
+          collectionLoading(false);
+          chooseBed();
+          $("#collection-status").textContent =
+            "Bed gagal dimuat. Pilihan sebelumnya tetap dipakai; pilih lagi untuk mencoba.";
+        }
+      }),
+  );
+}
+function chooseMap() {
+  if (state !== "home" || !ready) return;
+  dialog(
+    "Dunia Gimmy",
+    `<p>Pilih suasana mimpi. Lima tantangan memiliki aturan yang sama di setiap dunia.</p><div class="collection-grid">${MAPS.map((m) => `<button data-map="${m.id}" ${!mapUnlocked(m.id, progress.xp, progress.legacyRainforestUnlocked) ? "disabled" : ""} class="${progress.selectedMap === m.id ? "selected" : ""}"><img src="${base}gimmy/maps/${m.id}.webp" alt="${m.name}"/><strong>${m.name}</strong><small>${mapUnlocked(m.id, progress.xp, progress.legacyRainforestUnlocked) ? (progress.selectedMap === m.id ? "✓ Aktif" : "Pakai") : `${progress.xp}/${m.threshold} poin`}</small></button>`).join("")}</div><p id="collection-status" role="status"></p>`,
+  );
+  modal.querySelectorAll<HTMLButtonElement>("[data-map]").forEach(
+    (b) =>
+      (b.onclick = async () => {
+        if (!ready) return;
+        const id = b.dataset.map as WorldId;
+        collectionLoading(true);
+        modal
+          .querySelectorAll<HTMLButtonElement>("[data-map]")
+          .forEach((x) => (x.disabled = true));
+        $("#collection-status").textContent = "Memuat dunia…";
+        try {
+          const img = new Image();
+          img.src = `${base}gimmy/maps/${id}.webp`;
+          await img.decode();
+          progress.selectedMap = id;
+          save();
+          refreshWorld();
+          layoutScene();
+          collectionLoading(false);
+          chooseMap();
+        } catch {
+          collectionLoading(false);
+          chooseMap();
+          $("#collection-status").textContent =
+            "Dunia gagal dimuat. Pilih lagi untuk mencoba.";
+        }
+      }),
   );
 }
 function remove(e: Entity) {
@@ -223,6 +347,7 @@ function beginReady(seconds: number) {
   last = performance.now();
 }
 function start(level = selected) {
+  if (!ready) return;
   clearTimeout(toastTimer);
   $("#toast").classList.remove("show");
   selected = Math.min(levelFor(progress.xp), Math.max(1, level));
@@ -240,8 +365,9 @@ function start(level = selected) {
   $("#home-nav").hidden = true;
   $("#hud").hidden = false;
   $<HTMLButtonElement>("#profile").disabled = true;
+  $<HTMLButtonElement>("#map-select").disabled = true;
   $("#hint").textContent = "Bertahan sampai 00:00. Poin langsung tersimpan.";
-  scene?.play("Sleeping Idle");
+  scene?.resetSleep();
   beginReady(3);
   refreshProfile();
   updateHUD();
@@ -259,9 +385,10 @@ function home() {
   $("#home-nav").hidden = false;
   $("#hud").hidden = true;
   $<HTMLButtonElement>("#profile").disabled = false;
+  $<HTMLButtonElement>("#map-select").disabled = !ready;
   document.body.classList.remove("awake", "in-game");
   $("#stage").style.transform = "scale(1)";
-  scene?.play("Sleeping Idle");
+  scene?.resetSleep();
   refreshProfile();
 }
 let pauseFrom: State = "playing";
@@ -302,7 +429,7 @@ function finish() {
     state = "waking";
     wakeTime = 0;
     document.body.classList.add("awake");
-    scene?.play("Wake up 01", true);
+    scene?.setSleep(0);
     $("#hint").textContent = "Gimmy bangun. Poin milestone tetap tersimpan.";
     tone(220);
   }
@@ -373,7 +500,7 @@ function spawn(type: Kind, lifetime = 6, lane = Math.floor(Math.random() * 3)) {
             : 40;
   const el = document.createElement("button");
   el.className = `entity ${type}`;
-  el.innerHTML = `${icons[type]}<span class="entity-time"></span>`;
+  el.innerHTML = `${bugArt(type, true)}<span class="entity-time"></span>`;
   const e: Entity = {
     id: ++serial,
     type,
@@ -492,6 +619,21 @@ function syncInputTime() {
 }
 
 function position(e: Entity) {
+  const sprite = e.el.querySelector<HTMLCanvasElement>(".bug-animation");
+  if (sprite) {
+    const name = sprite.dataset.sprite as SpriteName,
+      img = animatedBugs.get(name);
+    if (img) {
+      sprite.hidden = false;
+      e.el.querySelector<HTMLImageElement>(".bug-art")!.hidden = true;
+      drawSprite(
+        sprite,
+        name,
+        img,
+        progress.reduced ? 0 : run.seconds - e.born,
+      );
+    }
+  }
   e.el.style.left = `${e.x}%`;
   e.el.style.top = `${e.y}%`;
   e.el.style.setProperty(
@@ -514,6 +656,20 @@ function resolve(e: Entity, success: boolean) {
       tone(330);
       $("#hint").textContent = "Mimpinya aman. Tetap perhatikan hutan.";
     } else {
+      const fx = document.createElement("img");
+      fx.className = "feeding-bug";
+      fx.src = `${base}gimmy/bugs/${e.type}.webp`;
+      fx.style.left = `${e.x}%`;
+      fx.style.top = `${e.y}%`;
+      $("#objects").append(fx);
+      if (!progress.reduced)
+        requestAnimationFrame(() => {
+          const r = $("#character-anchor").getBoundingClientRect(),
+            s = $("#stage").getBoundingClientRect();
+          fx.style.transform = `translate(${r.left + r.width / 2 - (s.left + (s.width * e.x) / 100)}px,${r.top + r.height * 0.55 - (s.top + (s.height * e.y) / 100)}px) scale(.25)`;
+          fx.style.opacity = "0";
+        });
+      window.setTimeout(() => fx.remove(), 450);
       run.change(foodValue[e.type]);
       progress.bugs[e.type]++;
       save();
@@ -579,16 +735,16 @@ function simulate(dt: number) {
 function layoutScene() {
   const w = $("#shell").clientWidth,
     h = $("#shell").clientHeight,
-    scale = Math.max(w / 2096, h / 1098),
-    bw = 2096 * scale,
+    scale = Math.max(w / 976, h / 1098),
+    bw = 976 * scale,
     bh = 1098 * scale;
-  const focal = 0.47,
+  const focal = 0.5,
     left = (w - bw) * focal,
     top = (h - bh) * 0.5;
-  const x = left + bw * 0.47,
-    y = top + bh * 0.56;
+  const x = left + bw * 0.5,
+    y = h * 0.56;
   const a = $("#character-anchor");
-  const ch = Math.min(h * 0.34, 330),
+  const ch = Math.min(h * 0.42, 400),
     cw = Math.min(w * 0.8, ch * 2.1);
   a.style.cssText = `left:${x}px;top:${y}px;width:${cw}px;height:${ch}px`;
   $("#stage").style.transformOrigin = `${x}px ${y}px`;
@@ -600,11 +756,8 @@ $("#level-choice").onclick = chooseLevel;
 $("#settings").onclick = () => {
   if (state !== "waking" && state !== "result") settings();
 };
-$("#map-select").onclick = () =>
-  dialog(
-    "Forest",
-    `<p>Hutan pertama Gimmy. Lima level Sleep Challenge memakai peta ini.</p><div class="notice">Level 4 dan 5 sama-sama 00:30. Level 5 menghadirkan gangguan lebih rapat dan cepat.</div>`,
-  );
+$("#map-select").onclick = chooseMap;
+$("#my-bed").onclick = chooseBed;
 $("#book").onclick = book;
 $("#how").onclick = help;
 $("#pause").onclick = pause;
@@ -660,8 +813,7 @@ function tick(now: number) {
     }
   } else if (state === "playing") {
     simulate(dt);
-    if (state === "playing")
-      scene?.play(run.sleep < 25 ? "Sleep Idle 2" : "Sleeping Idle");
+    if (state === "playing") scene?.setSleep(run.sleep);
   } else if (state === "waking") {
     wakeTime += dt;
     if (wakeTime > 2.3) results();
@@ -680,13 +832,15 @@ function tick(now: number) {
   }
 }
 refreshProfile();
+refreshWorld();
 applyQuality();
 layoutScene();
 save();
 async function load() {
   try {
     scene = new GimmyScene($<HTMLCanvasElement>("#gimmy"), progress.quality);
-    await scene.load();
+    scene.reduced = progress.reduced;
+    await scene.load(progress.selectedBed ?? "daun");
     layoutScene();
     ready = true;
     $<HTMLButtonElement>("#play").disabled = false;
@@ -708,6 +862,11 @@ if (import.meta.env.DEV)
         return {
           state,
           ready,
+          bed: progress.selectedBed,
+          map: progress.selectedMap,
+          sleepState: scene?.sleepState.state,
+          sprite: scene?.decodedName,
+          renderResources: { ...scene?.renderer.info.memory },
           sleep: run.sleep,
           seconds: run.seconds,
           remaining: run.remaining,
