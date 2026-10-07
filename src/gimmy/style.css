@@ -1560,3 +1560,11 @@ dialog.collection-dialog{
   object-fit:contain;
   filter:none;
 }
+
+/* New 1693-square source animations: centered character layer between bed and foreground. */
+#character-anchor{left:50% !important;top:50% !important;width:100% !important;height:100% !important;}
+#character-anchor .new-gimmy-animation{
+  position:absolute;left:50%;top:50%;width:min(43.5416667vw,836px);height:min(43.5648148vh,470.5px);
+  transform:translate(-50%,-50%);z-index:4;pointer-events:none;
+}
+#character-anchor #gimmy{display:none;}
