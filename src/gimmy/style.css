@@ -1552,3 +1552,11 @@ dialog.collection-dialog{
   border:0 !important;
   box-shadow:none !important;
 }
+
+.skin-art-popup{cursor:pointer;}
+.skin-art-popup>img{
+  width:min(920px,92vw);
+  height:min(88svh,760px);
+  object-fit:contain;
+  filter:none;
+}
