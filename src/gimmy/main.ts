@@ -43,6 +43,13 @@ const HOME_BEDS: Partial<Record<BedId, string>> = {
   goa: "Asset2_0000s_0001_Goa.png",
   kasur: "Asset2_0000s_0002_Bed.png",
 };
+const BED_CARDS: Partial<Record<BedId, string>> = {
+  daun: "Asset2_0000s_0000s_0002_Leaf.png",
+  ranting: "Asset2_0000s_0000s_0004_Twig.png",
+  goa: "Asset2_0000s_0000s_0001_Goa.png",
+  kasur: "Asset2_0000s_0000s_0003_Bed.png",
+  hamok: "Asset2_0000s_0000s_0000_Hamok.png",
+};
 const HOME_BED_FOREGROUNDS: Partial<Record<BedId, string>> = {
   daun: "Asset_0000s_0001_Foreground_Leaf.png",
   ranting: "Asset_0000s_0000_Foreground_Twig.png",
@@ -289,7 +296,7 @@ function chooseBed() {
   if (state !== "home" || !ready) return;
   dialog(
     "My Bed",
-    `<p>Tempat tidur terbuka dari poin tersimpan. Semua bed memberi tantangan yang sama.</p><div class="collection-grid">${BEDS.map((b) => `<button data-bed="${b.id}" ${progress.xp < b.threshold ? "disabled" : ""} class="${progress.selectedBed === b.id ? "selected" : ""}"><img src="${base}gimmy/beds/${b.id}.webp" alt="Bed ${b.name}"/><strong>${b.name}</strong><small>${progress.xp < b.threshold ? `${progress.xp}/${b.threshold} poin` : progress.selectedBed === b.id ? "✓ Dipakai" : "Preview & pakai"}</small></button>`).join("")}</div><p id="collection-status" role="status">Pilih bed untuk melihatnya bersama Gimmy.</p>`,
+    `<p>Tempat tidur terbuka dari poin tersimpan. Semua bed memberi tantangan yang sama.</p><div class="collection-grid">${BEDS.map((b) => `<button data-bed="${b.id}" ${progress.xp < b.threshold ? "disabled" : ""} class="${progress.selectedBed === b.id ? "selected" : ""}"><img src="${rootAsset(BED_CARDS[b.id] ?? BED_CARDS.daun!)}" alt="Bed ${b.name}"/><strong>${b.name}</strong><small>${progress.xp < b.threshold ? `${progress.xp}/${b.threshold} poin` : progress.selectedBed === b.id ? "✓ Dipakai" : "Preview & pakai"}</small></button>`).join("")}</div><p id="collection-status" role="status">Pilih bed untuk melihatnya bersama Gimmy.</p>`,
   );
   modal.querySelectorAll<HTMLButtonElement>("[data-bed]").forEach(
     (b) =>
@@ -303,7 +310,6 @@ function chooseBed() {
           .forEach((x) => (x.disabled = true));
         $("#collection-status").textContent = "Memuat bed…";
         try {
-          await scene.load(id);
           progress.selectedBed = id;
           save();
           refreshWorld();
