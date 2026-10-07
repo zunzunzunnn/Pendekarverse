@@ -296,7 +296,7 @@ function chooseBed() {
   if (state !== "home" || !ready) return;
   dialog(
     "My Bed",
-    `<p>Tempat tidur terbuka dari poin tersimpan. Semua bed memberi tantangan yang sama.</p><div class="collection-grid">${BEDS.map((b) => `<button data-bed="${b.id}" ${progress.xp < b.threshold ? "disabled" : ""} class="${progress.selectedBed === b.id ? "selected" : ""}"><img src="${rootAsset(BED_CARDS[b.id] ?? BED_CARDS.daun!)}" alt="Bed ${b.name}"/><strong>${b.name}</strong><small>${progress.xp < b.threshold ? `${progress.xp}/${b.threshold} poin` : progress.selectedBed === b.id ? "✓ Dipakai" : "Preview & pakai"}</small></button>`).join("")}</div><p id="collection-status" role="status">Pilih bed untuk melihatnya bersama Gimmy.</p>`,
+    `<p>Tempat tidur terbuka dari poin tersimpan. Semua bed memberi tantangan yang sama.</p><div class="collection-grid">${BEDS.map((b) => `<button data-bed="${b.id}" ${progress.xp < b.threshold || !HOME_BEDS[b.id] ? "disabled" : ""} class="${progress.selectedBed === b.id ? "selected" : ""}"><img src="${rootAsset(BED_CARDS[b.id] ?? BED_CARDS.daun!)}" alt="Bed ${b.name}"/><strong>${b.name}</strong><small>${!HOME_BEDS[b.id] ? "Segera hadir" : progress.xp < b.threshold ? `${progress.xp}/${b.threshold} poin` : progress.selectedBed === b.id ? "✓ Dipakai" : "Preview & pakai"}</small></button>`).join("")}</div><p id="collection-status" role="status">Pilih bed untuk melihatnya bersama Gimmy.</p>`,
   );
   modal.querySelectorAll<HTMLButtonElement>("[data-bed]").forEach(
     (b) =>
