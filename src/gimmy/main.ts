@@ -62,16 +62,16 @@ const BUG_CARDS = [
   ["Kecoa", "Asset2_0000s_0001s_0007_Kecoa.png"],
 ] as const;
 const SKIN_CARDS = [
-  ["Nusantara", "Asset2_0000s_0002s_0000_Nusantara.png"],
-  ["Galaxy", "Asset2_0000s_0002s_0001_Galaxy.png"],
-  ["Kuning", "Asset2_0000s_0002s_0002_Kuning.png"],
-  ["Hijau", "Asset2_0000s_0002s_0003_Hijau.png"],
-  ["Kakek", "Asset2_0000s_0002s_0004_Kakek.png"],
-  ["Malam", "Asset2_0000s_0002s_0005_Malam.png"],
-  ["Petualang", "Asset2_0000s_0002s_0006_Petualang.png"],
-  ["Biru Langit", "Asset2_0000s_0002s_0007_Biru-Langit.png"],
-  ["Sakura", "Asset2_0000s_0002s_0008_Sakura.png"],
   ["Merah", "Asset2_0000s_0002s_0009_Merah.png"],
+  ["Sakura", "Asset2_0000s_0002s_0008_Sakura.png"],
+  ["Biru Langit", "Asset2_0000s_0002s_0007_Biru-Langit.png"],
+  ["Petualang", "Asset2_0000s_0002s_0006_Petualang.png"],
+  ["Malam", "Asset2_0000s_0002s_0005_Malam.png"],
+  ["Kakek", "Asset2_0000s_0002s_0004_Kakek.png"],
+  ["Hijau", "Asset2_0000s_0002s_0003_Hijau.png"],
+  ["Kuning", "Asset2_0000s_0002s_0002_Kuning.png"],
+  ["Galaxy", "Asset2_0000s_0002s_0001_Galaxy.png"],
+  ["Nusantara", "Asset2_0000s_0002s_0000_Nusantara.png"],
 ] as const;
 const HOME_BED_FOREGROUNDS: Partial<Record<BedId, string>> = {
   daun: "Asset_0000s_0001_Foreground_Leaf.png",
