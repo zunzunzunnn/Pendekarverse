@@ -161,7 +161,7 @@ const format = (t: number) => {
     .padStart(2, "0")}:${(n % 60).toString().padStart(2, "0")}`;
 };
 $("#app").innerHTML = `<main id="shell">
- <div id="stage"><div class="forest-art"></div><img id="home-bed-layer" class="home-scene-layer" alt=""/><div class="mist"></div><div id="fireflies" aria-hidden="true">${Array.from({ length: 16 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--y:${(i * 23) % 90}%;--delay:${i * 0.4}s"></i>`).join("")}</div><div id="character-anchor"><img id="gimmy-still" src="${base}gimmy/character/Sleep%2001-Eat000.png" alt="Gimmy tidur"/><div class="gimmy-shadow"></div><canvas id="gimmy" aria-label="Gimmy si tarsius kecil"></canvas><div class="zzz" aria-hidden="true">z<span>z</span><small>z</small></div></div><img id="home-bed-foreground" class="home-scene-layer" alt=""/><div id="objects"></div><img id="home-global-foreground" class="home-scene-layer" src="${rootAsset("Asset2_0000s_0000_Foreground.png")}" alt=""/></div>
+ <div id="stage"><div class="forest-art"></div><img id="home-bed-layer" class="home-scene-layer" alt=""/><div class="mist"></div><div id="fireflies" aria-hidden="true">${Array.from({ length: 16 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--y:${(i * 23) % 90}%;--delay:${i * 0.4}s"></i>`).join("")}</div><div id="character-anchor"><div class="gimmy-shadow"></div><canvas id="gimmy" aria-label="Gimmy si tarsius kecil"></canvas><div class="zzz" aria-hidden="true">z<span>z</span><small>z</small></div></div><img id="home-bed-foreground" class="home-scene-layer" alt=""/><div id="objects"></div><img id="home-global-foreground" class="home-scene-layer" src="${rootAsset("Asset2_0000s_0000_Foreground.png")}" alt=""/></div>
  <div class="edge-shade"></div>
  <header><a href="#" class="wordmark" aria-label="Beranda Gimmy">GIMMY<span>THE LITTLE TARSIUS</span></a><button id="settings" class="art-button" aria-label="Pengaturan"><img src="${asset("settings")}" alt=""/></button></header>
  <button id="profile" aria-label="Pilih level"><img src="${asset("level")}" alt=""/><div><h2>Gimmy</h2><strong id="level"></strong><small id="xp"></small><div class="xp-track"><i id="xpbar"></i></div></div></button>
@@ -451,7 +451,7 @@ function start(level = selected) {
   $<HTMLButtonElement>("#profile").disabled = true;
   $<HTMLButtonElement>("#map-select").disabled = true;
   $("#hint").textContent = "Bertahan sampai 00:00. Poin langsung tersimpan.";
-  scene?.resetSleep();
+  void scene?.startGameplay();
   beginReady(3);
   refreshProfile();
   updateHUD();
@@ -755,6 +755,7 @@ function resolve(e: Entity, success: boolean) {
         });
       window.setTimeout(() => fx.remove(), 450);
       run.change(foodValue[e.type]);
+      scene?.feed();
       progress.bugs[e.type]++;
       save();
       toast(`${bugNames[e.type]} · +${foodValue[e.type]} Sleep`);
@@ -901,7 +902,8 @@ function tick(now: number) {
     if (state === "playing") scene?.setSleep(run.sleep);
   } else if (state === "waking") {
     wakeTime += dt;
-    if (wakeTime > 2.3) results();
+    scene?.setSleep(0);
+    if (scene?.wakeComplete || wakeTime > 15) results();
   }
   if (state === "playing" || state === "waking")
     $("#stage").style.transform =
@@ -949,7 +951,7 @@ if (import.meta.env.DEV)
           ready,
           bed: progress.selectedBed,
           map: progress.selectedMap,
-          sleepState: scene?.sleepState.state,
+          sleepState: scene?.sleepLevel,
           sprite: scene?.decodedName,
           renderResources: { ...scene?.renderer.info.memory },
           sleep: run.sleep,
