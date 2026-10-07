@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { Quality } from "./rules";
 import type { BedId } from "./collections";
 import { SleepStateDirector, stateSprite } from "./sleep-state";
@@ -68,49 +67,9 @@ export class GimmyScene {
     this.camera.updateProjectionMatrix();
   }
   async load(bed: BedId = "daun") {
-    const gltf = await new GLTFLoader().loadAsync(
-      `${import.meta.env.BASE_URL}gimmy/beds/${bed}.glb`,
-    );
-    const old = this.root;
-    this.mixer?.stopAllAction();
-    if (old) {
-      this.scene.remove(old);
-      this.mixer?.uncacheRoot(old);
-      old.traverse((o) => {
-        if (o instanceof THREE.SkinnedMesh) o.skeleton.dispose();
-        if (o instanceof THREE.Mesh) {
-          o.geometry.dispose();
-          for (const m of Array.isArray(o.material)
-            ? o.material
-            : [o.material]) {
-            for (const value of Object.values(m))
-              if (value instanceof THREE.Texture) value.dispose();
-            m.dispose();
-          }
-        }
-      });
-    }
-    this.root = gltf.scene;
+    // Beds are composited as PNG layers in main.ts. The Three.js canvas is
+    // retained for character compatibility, but no bed GLB is loaded.
     this.bed = bed;
-    this.actions.clear();
-    this.current = undefined;
-    this.scene.add(gltf.scene);
-    this.mixer = new THREE.AnimationMixer(gltf.scene);
-    for (const clip of gltf.animations)
-      this.actions.set(
-        clip.name.split("|").pop()!.trim(),
-        this.mixer.clipAction(clip),
-      );
-    this.play("Sleep 01");
-    this.mixer.update(0.5);
-    gltf.scene.updateMatrixWorld(true);
-    gltf.scene.traverse((o) => {
-      if (o instanceof THREE.Mesh && o.name.startsWith("Plane"))
-        o.visible = false;
-    });
-    const center = new THREE.Vector3(-0.12, 0.05, -0.27);
-    this.camera.position.copy(center).add(new THREE.Vector3(0, 0.65, 4));
-    this.camera.lookAt(center);
     this.ready = true;
     this.resize();
     this.resetSleep();
