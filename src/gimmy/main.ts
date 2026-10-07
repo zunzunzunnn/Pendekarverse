@@ -27,7 +27,28 @@ import { loadSprite, drawSprite, type SpriteName } from "./sprites";
 const $ = <T extends HTMLElement = HTMLElement>(s: string) =>
   document.querySelector<T>(s)!;
 const base = import.meta.env.BASE_URL,
-  asset = (name: string) => `${base}gimmy/ui/${name}.webp`;
+  asset = (name: string) => `${base}gimmy/ui/${name}.webp`,
+  rootAsset = (name: string) => `${base}${name}`;
+
+const HOME_BACKGROUNDS: Record<WorldId, string> = {
+  forest: "Asset2_0000s_0000s_0004_Forest.png",
+  village: "Asset2_0000s_0000s_0000_Village.png",
+  canopy: "Asset2_0000s_0000s_0001_Tree-Canopy.png",
+  dream: "Asset2_0000s_0000s_0003_Dream.png",
+  rainforest: "Asset2_0000s_0000s_0002_Rainforest.png",
+};
+const HOME_BEDS: Partial<Record<BedId, string>> = {
+  daun: "Asset2_0000s_0003_Leaf.png",
+  ranting: "Asset2_0000s_0004_Twig.png",
+  goa: "Asset2_0000s_0001_Goa.png",
+  kasur: "Asset2_0000s_0002_Bed.png",
+};
+const HOME_BED_FOREGROUNDS: Partial<Record<BedId, string>> = {
+  daun: "Asset_0000s_0001_Foreground_Leaf.png",
+  ranting: "Asset_0000s_0000_Foreground_Twig.png",
+  goa: "Asset_0000s_0002_Foreground_Goa.png",
+  kasur: "Asset_0000s_0003_Foreground__Bed.png",
+};
 const animatedBugs = new Map<SpriteName, HTMLImageElement>();
 function bugArt(type: string, animate = false) {
   if (!BUG_ART.includes(type as (typeof BUG_ART)[number]))
@@ -110,7 +131,7 @@ const format = (t: number) => {
     .padStart(2, "0")}:${(n % 60).toString().padStart(2, "0")}`;
 };
 $("#app").innerHTML = `<main id="shell">
- <div id="stage"><div class="forest-art"></div><div class="mist"></div><div id="fireflies" aria-hidden="true">${Array.from({ length: 16 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--y:${(i * 23) % 90}%;--delay:${i * 0.4}s"></i>`).join("")}</div><div id="character-anchor"><div class="gimmy-shadow"></div><canvas id="gimmy" aria-label="Gimmy si tarsius kecil"></canvas><div class="zzz" aria-hidden="true">z<span>z</span><small>z</small></div></div><div id="objects"></div></div>
+ <div id="stage"><div class="forest-art"></div><img id="home-bed-layer" class="home-scene-layer" alt=""/><div class="mist"></div><div id="fireflies" aria-hidden="true">${Array.from({ length: 16 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--y:${(i * 23) % 90}%;--delay:${i * 0.4}s"></i>`).join("")}</div><div id="character-anchor"><div class="gimmy-shadow"></div><canvas id="gimmy" aria-label="Gimmy si tarsius kecil"></canvas><div class="zzz" aria-hidden="true">z<span>z</span><small>z</small></div></div><img id="home-bed-foreground" class="home-scene-layer" alt=""/><div id="objects"></div><img id="home-global-foreground" class="home-scene-layer" src="${rootAsset("Asset2_0000s_0000_Foreground.png")}" alt=""/></div>
  <div class="edge-shade"></div>
  <header><a href="#" class="wordmark" aria-label="Beranda Gimmy">GIMMY<span>THE LITTLE TARSIUS</span></a><button id="settings" class="art-button" aria-label="Pengaturan"><img src="${asset("settings")}" alt=""/></button></header>
  <button id="profile" aria-label="Pilih level"><img src="${asset("level")}" alt=""/><div><h2>Gimmy</h2><strong id="level"></strong><small id="xp"></small><div class="xp-track"><i id="xpbar"></i></div></div></button>
@@ -245,9 +266,15 @@ function refreshWorld() {
     `<img src="${base}gimmy/maps/${map.id}.webp" alt=""/><span>${map.name}<small>AKTIF</small></span>`;
   $("#map-select").setAttribute("aria-label", `${map.name}, pilih peta`);
   $(".forest-art").style.backgroundImage =
-    `url("${base}gimmy/maps/${map.id}.webp")`;
+    `url("${rootAsset(HOME_BACKGROUNDS[map.id])}")`;
+  const bedId = progress.selectedBed ?? "daun";
+  const bed = HOME_BEDS[bedId] ?? HOME_BEDS.daun!;
+  const bedForeground =
+    HOME_BED_FOREGROUNDS[bedId] ?? HOME_BED_FOREGROUNDS.daun!;
+  $<HTMLImageElement>("#home-bed-layer").src = rootAsset(bed);
+  $<HTMLImageElement>("#home-bed-foreground").src = rootAsset(bedForeground);
   $("#my-bed").title =
-    `Bed ${BEDS.find((b) => b.id === (progress.selectedBed ?? "daun"))!.name}`;
+    `Bed ${BEDS.find((b) => b.id === bedId)!.name}`;
 }
 function collectionLoading(loading: boolean) {
   ready = !loading;
