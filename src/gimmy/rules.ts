@@ -44,10 +44,10 @@ export const sleepLabel = (v: number) =>
           ? "Restless"
           : "Awake";
 export const foodValue: Record<Bug, number> = {
-  moth: 10,
-  cricket: 15,
-  beetle: 20,
-  cockroach: 10,
+  moth: 4,
+  cricket: 6,
+  beetle: 8,
+  cockroach: 4,
 };
 export const bugNames: Record<Bug, string> = {
   moth: "Ngengat",
