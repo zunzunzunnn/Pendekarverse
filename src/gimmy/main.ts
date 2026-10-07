@@ -146,7 +146,7 @@ $("#app").innerHTML = `<main id="shell">
  <section id="home"><img class="logo" src="${base}gimmy/logo.webp" alt="Gimmy : The Little Tarsius"/><div class="home-copy"><h1>Jaga mimpi kecilnya.</h1><p>Redakan riuh hutan. Bertahan sampai 00:00.</p><button id="play" class="art-button" aria-label="Play" disabled><img src="${asset("play")}" alt="Play"/></button><small id="load-note" role="status">Menyiapkan Gimmy…</small><button id="level-choice" class="text-button">Pilih tantangan</button></div></section>
  <section id="hud" hidden><div class="chain-stack"><div id="run-points"><span>✦ Poin tersimpan</span><strong>0</strong><small id="earned">+0 sesi ini</small></div><div class="chain"><img src="${asset("chain")}" alt="Sleep Chain"/><strong id="timer">02:00</strong></div><small id="next-reward"></small><div id="milestones" aria-label="Milestone sesi"><i></i><i></i><i></i><i></i></div></div>
  <button id="pause" class="round-button" aria-label="Jeda permainan">Ⅱ</button><div id="hint" role="status"></div><button id="branch" hidden>♧ Ketuk ranting <small>Alihkan katak</small></button><div class="sleep-panel"><div><span>☾ SLEEP METER</span><strong id="sleep-label">Cozy</strong></div><div class="sleep-track" role="progressbar" aria-label="Sleep Meter" aria-valuemin="0" aria-valuemax="100"><i id="sleep-fill"></i></div><small><span id="sleep-number">80</span> / 100 <span id="risk">Jaga mimpinya sampai waktu habis</span></small></div></section>
- <nav id="home-nav"><button id="book" class="art-button" aria-label="Bug Guide"><img src="${asset("bugs")}" alt="Bug Guide"/></button><button id="my-bed" class="art-button" aria-label="Bed Upgrade"><img src="${base}gimmy/ui/bed-upgrade.webp" alt="Bed Upgrade"/></button><button id="how" class="art-button" aria-label="Cara bermain"><img src="${asset("info")}" alt="Info"/></button></nav>
+ <nav id="home-nav"><button id="book" class="art-button collection-entry" aria-label="Bug Guide"><img src="${base}gimmy/collection-ui/Bug Guide2.png" alt="Bug Guide"/></button><button id="my-bed" class="art-button collection-entry" aria-label="Bed Upgrade"><img src="${base}gimmy/collection-ui/Bed Upgrade.png" alt="Bed Upgrade"/></button><button id="skins" class="art-button collection-entry" aria-label="Skins Collection"><img src="${base}gimmy/collection-ui/Collection.png" alt="Skins Collection"/></button><button id="how" class="art-button" aria-label="Cara bermain"><img src="${asset("info")}" alt="Info"/></button></nav>
  <div id="ready-cue" hidden aria-live="polite"></div><footer><span>GIMMY · SLEEP CHALLENGE</span><span id="best"></span></footer>
  </main><div id="toast" role="status"></div><dialog id="dialog" aria-labelledby="dialog-title"></dialog>`;
 const modal = $<HTMLDialogElement>("#dialog");
@@ -211,6 +211,14 @@ function dialog(title: string, body: string) {
   modal.querySelector(".close")!.addEventListener("click", () => modal.close());
   if (!modal.open) modal.showModal();
 }
+function collectionDialog(kind: "beds" | "skins" | "bugs", body: string, total: string) {
+  const title = kind === "beds" ? "Asset2_0000s_0000_Beds-Collection.png" : kind === "skins" ? "Asset2_0000s_0001_Skins-Collection.png" : "Asset2_0000s_0002_Bugs-Guide-Collection.png";
+  modal.classList.add("collection-dialog");
+  modal.innerHTML = `<div class="collection-bg"></div><img class="collection-panel" src="${base}gimmy/collection-ui/Asset2_0000s_0005_Panel.png" alt=""/><img class="collection-title" src="${base}gimmy/collection-ui/${title}" alt=""/><div class="collection-total"><img src="${base}gimmy/collection-ui/Asset2_0000s_0004_Total-Skin.png" alt="Total"/><strong>${total}</strong></div><button class="collection-exit" aria-label="Kembali ke main menu"><img src="${base}gimmy/collection-ui/Asset2_0000s_0003_Exit.png" alt="Exit"/></button><div class="collection-content">${body}</div>`;
+  modal.querySelector(".collection-exit")!.addEventListener("click", () => modal.close());
+  modal.addEventListener("close", () => modal.classList.remove("collection-dialog"), { once: true });
+  if (!modal.open) modal.showModal();
+}
 function chooseLevel() {
   dialog(
     "Pilih mimpi berikutnya",
@@ -257,14 +265,21 @@ function help() {
   );
 }
 function book() {
-  dialog(
-    "Bug Guide",
+  const found = BUG_ART.filter((t) => t in foodValue && progress.bugs[t as Bug] > 0).length;
+  collectionDialog(
+    "bugs",
     `<div class="bug-grid">${BUG_ART.map((t) => {
       const active = t in foodValue;
-      return `<article><div>${bugArt(t)}</div><h3>${bugNames[t as Bug] ?? EXTRA_BUG_NAMES[t]}</h3><b>${active ? `+${foodValue[t as Bug]} Sleep` : "Segera hadir"}</b><p>${t === "cricket" ? "Tangkap sebelum berbunyi: terlambat −8 Sleep." : active ? "Makanan untuk menjaga mimpi Gimmy." : "Belum muncul dalam permainan."}</p><small>${active ? `${progress.bugs[t as Bug]} ditemukan` : "Belum tersedia"}</small></article>`;
-    }).join(
-      "",
-    )}</div><div class="notice">Daun mengenai sarang: −12 Sleep. Katak berbunyi: −18 Sleep. Bar kecil pada objek menunjukkan waktu sebelum pergi atau berdampak.</div>`,
+      return `<article><div>${bugArt(t)}</div><h3>${bugNames[t as Bug] ?? EXTRA_BUG_NAMES[t]}</h3><b>${active ? `+${foodValue[t as Bug]} Sleep` : "Segera hadir"}</b><small>${active ? `${progress.bugs[t as Bug]} ditemukan` : "Belum tersedia"}</small></article>`;
+    }).join("")}</div>`,
+    `${found}/${BUG_ART.length}`,
+  );
+}
+function skinsCollection() {
+  collectionDialog(
+    "skins",
+    '<div class="skin-empty"><strong>Skin Collection</strong><p>Slot skin siap. Asset skin individual belum tersedia di project.</p></div>',
+    "0/0",
   );
 }
 function refreshWorld() {
@@ -294,9 +309,10 @@ function collectionLoading(loading: boolean) {
 }
 function chooseBed() {
   if (state !== "home" || !ready) return;
-  dialog(
-    "Bed Upgrade",
-    `<p>Pilih tempat tidur Gimmy. Bed yang terbuka bisa langsung dipakai.</p><div class="collection-grid bed-card-grid">${BEDS.map((b) => `<button data-bed="${b.id}" class="${progress.selectedBed === b.id ? "selected" : ""}"><img src="${rootAsset(BED_CARDS[b.id] ?? BED_CARDS.daun!)}" alt="Bed ${b.name}"/><strong>${b.name}</strong><small>${progress.selectedBed === b.id ? "✓ Dipakai" : "Pakai"}</small></button>`).join("")}</div><p id="collection-status" role="status">Pilih bed untuk melihatnya bersama Gimmy.</p>`,
+  collectionDialog(
+    "beds",
+    `<div class="collection-grid bed-card-grid">${BEDS.map((b) => `<button data-bed="${b.id}" class="${progress.selectedBed === b.id ? "selected" : ""}"><img src="${rootAsset(BED_CARDS[b.id] ?? BED_CARDS.daun!)}" alt="Bed ${b.name}"/><strong>${b.name}</strong><small>${progress.selectedBed === b.id ? "✓ Dipakai" : "Pakai"}</small></button>`).join("")}</div><p id="collection-status" role="status">Pilih bed untuk melihatnya bersama Gimmy.</p>`,
+    `${BEDS.length}/${BEDS.length}`,
   );
   modal.querySelectorAll<HTMLButtonElement>("[data-bed]").forEach(
     (b) =>
@@ -792,6 +808,7 @@ $("#settings").onclick = () => {
 $("#map-select").onclick = chooseMap;
 $("#my-bed").onclick = chooseBed;
 $("#book").onclick = book;
+$("#skins").onclick = skinsCollection;
 $("#how").onclick = help;
 $("#pause").onclick = pause;
 $("#branch").onclick = () => {
