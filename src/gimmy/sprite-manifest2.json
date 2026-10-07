@@ -1,0 +1,86 @@
+{
+  "sleep1": {
+    "width": 384,
+    "height": 384,
+    "count": 118,
+    "cols": 8,
+    "fps": 24
+  },
+  "sleep2": {
+    "width": 384,
+    "height": 384,
+    "count": 299,
+    "cols": 8,
+    "fps": 24
+  },
+  "sleep3": {
+    "width": 384,
+    "height": 384,
+    "count": 300,
+    "cols": 8,
+    "fps": 24
+  },
+  "sleep4": {
+    "width": 384,
+    "height": 384,
+    "count": 299,
+    "cols": 8,
+    "fps": 24
+  },
+  "eat1": {
+    "width": 384,
+    "height": 384,
+    "count": 138,
+    "cols": 8,
+    "fps": 24
+  },
+  "eat2": {
+    "width": 384,
+    "height": 384,
+    "count": 330,
+    "cols": 8,
+    "fps": 24
+  },
+  "eat3": {
+    "width": 384,
+    "height": 384,
+    "count": 299,
+    "cols": 8,
+    "fps": 24
+  },
+  "eat4": {
+    "width": 384,
+    "height": 384,
+    "count": 251,
+    "cols": 8,
+    "fps": 24
+  },
+  "trans12": {
+    "width": 384,
+    "height": 384,
+    "count": 266,
+    "cols": 8,
+    "fps": 24
+  },
+  "trans23": {
+    "width": 384,
+    "height": 384,
+    "count": 305,
+    "cols": 8,
+    "fps": 24
+  },
+  "trans34": {
+    "width": 384,
+    "height": 384,
+    "count": 304,
+    "cols": 8,
+    "fps": 24
+  },
+  "trans45": {
+    "width": 384,
+    "height": 384,
+    "count": 265,
+    "cols": 8,
+    "fps": 24
+  }
+}
