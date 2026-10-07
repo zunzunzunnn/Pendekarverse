@@ -50,6 +50,18 @@ const BED_CARDS: Partial<Record<BedId, string>> = {
   kasur: "Asset2_0000s_0000s_0003_Bed.png",
   hamok: "Asset2_0000s_0000s_0000_Hamok.png",
 };
+const SKIN_CARDS = [
+  ["Nusantara", "Asset2_0000s_0002s_0000_Nusantara.png"],
+  ["Galaxy", "Asset2_0000s_0002s_0001_Galaxy.png"],
+  ["Kuning", "Asset2_0000s_0002s_0002_Kuning.png"],
+  ["Hijau", "Asset2_0000s_0002s_0003_Hijau.png"],
+  ["Kakek", "Asset2_0000s_0002s_0004_Kakek.png"],
+  ["Malam", "Asset2_0000s_0002s_0005_Malam.png"],
+  ["Petualang", "Asset2_0000s_0002s_0006_Petualang.png"],
+  ["Biru Langit", "Asset2_0000s_0002s_0007_Biru-Langit.png"],
+  ["Sakura", "Asset2_0000s_0002s_0008_Sakura.png"],
+  ["Merah", "Asset2_0000s_0002s_0009_Merah.png"],
+] as const;
 const HOME_BED_FOREGROUNDS: Partial<Record<BedId, string>> = {
   daun: "Asset_0000s_0001_Foreground_Leaf.png",
   ranting: "Asset_0000s_0000_Foreground_Twig.png",
@@ -278,9 +290,20 @@ function book() {
 function skinsCollection() {
   collectionDialog(
     "skins",
-    '<div class="skin-empty"><strong>Skin Collection</strong><p>Slot skin siap. Asset skin individual belum tersedia di project.</p></div>',
-    "0/0",
+    `<div class="skin-card-grid">${SKIN_CARDS.map(([name, file]) => `<button class="skin-card" data-skin="${file}" aria-label="Preview skin ${name}"><img src="${base}gimmy/skins/${file}" alt="${name}"/></button>`).join("")}</div><div id="skin-preview" class="skin-preview" hidden><button class="skin-preview-close" aria-label="Tutup preview">×</button><img alt="Skin preview"/></div>`,
+    `${SKIN_CARDS.length}/${SKIN_CARDS.length}`,
   );
+  const preview = $<HTMLDivElement>("#skin-preview");
+  const previewImg = preview.querySelector("img")!;
+  modal.querySelectorAll<HTMLButtonElement>(".skin-card").forEach((button) => {
+    button.onclick = () => {
+      previewImg.src = `${base}gimmy/skins/${button.dataset.skin}`;
+      preview.hidden = false;
+    };
+  });
+  preview.onclick = (event) => {
+    if (event.target === preview || (event.target as HTMLElement).closest(".skin-preview-close")) preview.hidden = true;
+  };
 }
 function refreshWorld() {
   const map = MAPS.find((m) => m.id === (progress.selectedMap ?? "forest"))!;
