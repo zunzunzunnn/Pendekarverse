@@ -308,20 +308,14 @@ function book() {
 function skinsCollection() {
   collectionDialog(
     "skins",
-    `<div class="skin-card-grid">${SKIN_CARDS.map(([name, file]) => `<button class="skin-card" data-skin="${file}" aria-label="Preview skin ${name}"><img src="${base}gimmy/skins/${file}" alt="${name}"/></button>`).join("")}</div><div id="skin-preview" class="skin-preview" hidden><button class="skin-preview-close" aria-label="Tutup preview">×</button><img alt="Skin preview"/></div>`,
+    `<div class="skin-card-grid">${SKIN_CARDS.map(([name, file]) => `<button class="skin-card" data-skin="${file}" aria-label="Pilih skin ${name}"><img src="${base}gimmy/skins/${file}" alt="${name}"/></button>`).join("")}</div><div id="skin-preview" class="skin-preview skin-art-popup" hidden><img src="${base}gimmy/collection-ui/pop%20up%20Skins%20copy.png" alt="Skin popup"/></div>`,
     `${SKIN_CARDS.length}/${SKIN_CARDS.length}`,
   );
   const preview = $<HTMLDivElement>("#skin-preview");
-  const previewImg = preview.querySelector("img")!;
   modal.querySelectorAll<HTMLButtonElement>(".skin-card").forEach((button) => {
-    button.onclick = () => {
-      previewImg.src = `${base}gimmy/skins/${button.dataset.skin}`;
-      preview.hidden = false;
-    };
+    button.onclick = () => { preview.hidden = false; };
   });
-  preview.onclick = (event) => {
-    if (event.target === preview || (event.target as HTMLElement).closest(".skin-preview-close")) preview.hidden = true;
-  };
+  preview.onclick = () => { preview.hidden = true; };
 }
 function refreshWorld() {
   const map = MAPS.find((m) => m.id === (progress.selectedMap ?? "forest"))!;
