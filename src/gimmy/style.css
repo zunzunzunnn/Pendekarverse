@@ -1442,7 +1442,7 @@ dialog.collection-dialog{
 .collection-total strong{position:relative;z-index:1;font:22px Sniglet;color:#fff;text-shadow:0 2px 3px #000;}
 .collection-exit{position:absolute;left:4%;top:3%;width:82px;height:82px;border:0;background:transparent;padding:0;z-index:6;cursor:pointer;}
 .collection-exit img{width:100%;height:100%;object-fit:contain;}
-.collection-dialog .bed-card-grid{grid-template-columns:repeat(5,minmax(0,230px));justify-content:center;align-content:center;gap:8px 3px;}
+.collection-dialog .bed-card-grid{grid-template-columns:repeat(5,minmax(0,230px));justify-content:center;align-content:center;gap:8px 10px;}
 .collection-dialog .bug-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
 .skin-empty{min-height:260px;display:grid;place-content:center;text-align:center;color:#fff0ce;}
 @media(max-width:700px){
@@ -1491,18 +1491,18 @@ dialog.collection-dialog{
 /* Bugs collection cards: 261x362, compact and kept inside collection panel */
 .bug-card-grid{
   width:100%;height:100%;display:grid;
-  grid-template-columns:repeat(5,minmax(0,209px));
+  grid-template-columns:repeat(5,minmax(0,240px));
   justify-content:center;align-content:center;gap:8px 4px;
 }
 .bug-card{
-  width:100%;max-width:209px;aspect-ratio:261/362;
+  width:100%;max-width:240px;aspect-ratio:261/362;
   padding:0;border:0;background:transparent;cursor:pointer;
   transition:transform .16s ease,filter .16s ease;
 }
 .bug-card:hover,.bug-card:focus-visible{transform:scale(1.025);filter:brightness(1.08);}
 .bug-card img{display:block;width:100%;height:100%;object-fit:contain;}
-@media(max-width:900px){.bug-card-grid{grid-template-columns:repeat(3,minmax(0,209px));height:auto;align-content:start;}}
-@media(max-width:600px){.bug-card-grid{grid-template-columns:repeat(2,minmax(0,180px));gap:6px 3px;}}
+@media(max-width:900px){.bug-card-grid{grid-template-columns:repeat(3,minmax(0,240px));height:auto;align-content:start;}}
+@media(max-width:600px){.bug-card-grid{grid-template-columns:repeat(2,minmax(0,207px));gap:6px 3px;}}
 
 /* Portrait Bed Collection cards: source ratio 287x392 */
 .collection-dialog .bed-card-grid button[data-bed]{
