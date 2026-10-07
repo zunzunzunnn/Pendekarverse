@@ -1514,3 +1514,24 @@ dialog.collection-dialog{
 }
 .collection-dialog .bed-card-grid button[data-bed] strong,
 .collection-dialog .bed-card-grid button[data-bed] small{display:none;}
+
+/* Still-image character alignment test.
+   Reference canvas: 1920x1080; target character box: 836x470.5. */
+#gimmy-still{
+  position:absolute;
+  left:50%;top:50%;
+  width:43.5416667vw;
+  height:43.5648148vh;
+  max-width:none;max-height:none;
+  transform:translate(-50%,-50%);
+  object-fit:contain;
+  z-index:4;
+  pointer-events:none;
+}
+#character-anchor:has(#gimmy-still){
+  left:50% !important;top:50% !important;
+  width:100% !important;height:100% !important;
+}
+#character-anchor:has(#gimmy-still) #gimmy,
+#character-anchor:has(#gimmy-still) .gimmy-shadow,
+#character-anchor:has(#gimmy-still) .zzz{display:none !important;}
