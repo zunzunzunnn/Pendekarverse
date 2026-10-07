@@ -296,7 +296,7 @@ function chooseBed() {
   if (state !== "home" || !ready) return;
   dialog(
     "Bed Upgrade",
-    `<p>Pilih tempat tidur Gimmy. Bed yang terbuka bisa langsung dipakai.</p><div class="collection-grid bed-card-grid">${BEDS.map((b) => `<button data-bed="${b.id}" ${progress.xp < b.threshold || !HOME_BEDS[b.id] ? "disabled" : ""} class="${progress.selectedBed === b.id ? "selected" : ""}"><img src="${rootAsset(BED_CARDS[b.id] ?? BED_CARDS.daun!)}" alt="Bed ${b.name}"/><strong>${b.name}</strong><small>${!HOME_BEDS[b.id] ? "Segera hadir" : progress.xp < b.threshold ? `${progress.xp}/${b.threshold} poin` : progress.selectedBed === b.id ? "✓ Dipakai" : "Preview & pakai"}</small></button>`).join("")}</div><p id="collection-status" role="status">Pilih bed untuk melihatnya bersama Gimmy.</p>`,
+    `<p>Pilih tempat tidur Gimmy. Bed yang terbuka bisa langsung dipakai.</p><div class="collection-grid bed-card-grid">${BEDS.map((b) => `<button data-bed="${b.id}" class="${progress.selectedBed === b.id ? "selected" : ""}"><img src="${rootAsset(BED_CARDS[b.id] ?? BED_CARDS.daun!)}" alt="Bed ${b.name}"/><strong>${b.name}</strong><small>${progress.selectedBed === b.id ? "✓ Dipakai" : "Pakai"}</small></button>`).join("")}</div><p id="collection-status" role="status">Pilih bed untuk melihatnya bersama Gimmy.</p>`,
   );
   modal.querySelectorAll<HTMLButtonElement>("[data-bed]").forEach(
     (b) =>
@@ -329,7 +329,7 @@ function chooseMap() {
   if (state !== "home" || !ready) return;
   dialog(
     "Dunia Gimmy",
-    `<p>Pilih suasana mimpi. Lima tantangan memiliki aturan yang sama di setiap dunia.</p><div class="collection-grid">${MAPS.map((m) => `<button data-map="${m.id}" ${!mapUnlocked(m.id, progress.xp, progress.legacyRainforestUnlocked) ? "disabled" : ""} class="${progress.selectedMap === m.id ? "selected" : ""}"><img src="${base}gimmy/maps/${m.id}.webp" alt="${m.name}"/><strong>${m.name}</strong><small>${mapUnlocked(m.id, progress.xp, progress.legacyRainforestUnlocked) ? (progress.selectedMap === m.id ? "✓ Aktif" : "Pakai") : `${progress.xp}/${m.threshold} poin`}</small></button>`).join("")}</div><p id="collection-status" role="status"></p>`,
+    `<p>Pilih suasana mimpi. Lima tantangan memiliki aturan yang sama di setiap dunia.</p><div class="collection-grid">${MAPS.map((m) => `<button data-map="${m.id}" class="${progress.selectedMap === m.id ? "selected" : ""}"><img src="${base}gimmy/maps/${m.id}.webp" alt="${m.name}"/><strong>${m.name}</strong><small>${progress.selectedMap === m.id ? "✓ Aktif" : "Pakai"}</small></button>`).join("")}</div><p id="collection-status" role="status"></p>`,
   );
   modal.querySelectorAll<HTMLButtonElement>("[data-map]").forEach(
     (b) =>
