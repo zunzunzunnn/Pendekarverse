@@ -50,6 +50,17 @@ const BED_CARDS: Partial<Record<BedId, string>> = {
   kasur: "Asset2_0000s_0000s_0003_Bed.png",
   hamok: "Asset2_0000s_0000s_0000_Hamok.png",
 };
+const BUG_CARDS = [
+  ["Belalang", "Asset2_0000s_0001s_0008_Belalang.png"],
+  ["Ulat", "Asset2_0000s_0001s_0000_Ulat.png"],
+  ["Semut", "Asset2_0000s_0001s_0001_Semut.png"],
+  ["Rayap", "Asset2_0000s_0001s_0002_Rayap.png"],
+  ["Laba-laba", "Asset2_0000s_0001s_0003_Laba-laba.png"],
+  ["Kumbang", "Asset2_0000s_0001s_0004_Kumbang.png"],
+  ["Ngengat", "Asset2_0000s_0001s_0005_Ngengat.png"],
+  ["Jangkrik", "Asset2_0000s_0001s_0006_Jangkrik.png"],
+  ["Kecoa", "Asset2_0000s_0001s_0007_Kecoa.png"],
+] as const;
 const SKIN_CARDS = [
   ["Nusantara", "Asset2_0000s_0002s_0000_Nusantara.png"],
   ["Galaxy", "Asset2_0000s_0002s_0001_Galaxy.png"],
@@ -277,15 +288,22 @@ function help() {
   );
 }
 function book() {
-  const found = BUG_ART.filter((t) => t in foodValue && progress.bugs[t as Bug] > 0).length;
   collectionDialog(
     "bugs",
-    `<div class="bug-grid">${BUG_ART.map((t) => {
-      const active = t in foodValue;
-      return `<article><div>${bugArt(t)}</div><h3>${bugNames[t as Bug] ?? EXTRA_BUG_NAMES[t]}</h3><b>${active ? `+${foodValue[t as Bug]} Sleep` : "Segera hadir"}</b><small>${active ? `${progress.bugs[t as Bug]} ditemukan` : "Belum tersedia"}</small></article>`;
-    }).join("")}</div>`,
-    `${found}/${BUG_ART.length}`,
+    `<div class="bug-card-grid">${BUG_CARDS.map(([name, file]) => `<button class="bug-card" data-bug-card="${file}" aria-label="Preview ${name}"><img src="${base}gimmy/bug-cards/${file}" alt="${name}"/></button>`).join("")}</div><div id="bug-preview" class="skin-preview" hidden><button class="skin-preview-close" aria-label="Tutup preview">×</button><img alt="Bug preview"/></div>`,
+    `${BUG_CARDS.length}/${BUG_CARDS.length}`,
   );
+  const preview = $<HTMLDivElement>("#bug-preview");
+  const previewImg = preview.querySelector("img")!;
+  modal.querySelectorAll<HTMLButtonElement>(".bug-card").forEach((button) => {
+    button.onclick = () => {
+      previewImg.src = `${base}gimmy/bug-cards/${button.dataset.bugCard}`;
+      preview.hidden = false;
+    };
+  });
+  preview.onclick = (event) => {
+    if (event.target === preview || (event.target as HTMLElement).closest(".skin-preview-close")) preview.hidden = true;
+  };
 }
 function skinsCollection() {
   collectionDialog(
