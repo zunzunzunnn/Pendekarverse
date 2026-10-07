@@ -1,139 +1,135 @@
 import * as THREE from "three";
 import type { Quality } from "./rules";
 import type { BedId } from "./collections";
-import { SleepStateDirector, stateSprite } from "./sleep-state";
-import { loadSprite, drawSprite, type SpriteName } from "./sprites";
+import { loadGimmyAnim, drawGimmyAnim, animDuration, type GimmyAnim } from "./gimmy-animations";
+
+type SleepLevel = 1 | 2 | 3 | 4 | 5;
+const idleName = (n: Exclude<SleepLevel, 5>) => `sleep${n}` as GimmyAnim;
+const eatName = (n: Exclude<SleepLevel, 5>) => `eat${n}` as GimmyAnim;
+const transitionName = (from: number) => `trans${from}${from + 1}` as GimmyAnim;
+
 export class GimmyScene {
   renderer: THREE.WebGLRenderer;
   scene = new THREE.Scene();
-  camera = new THREE.OrthographicCamera(-100, 100, 100, -100, 0.1, 2000);
-  mixer?: THREE.AnimationMixer;
-  actions = new Map<string, THREE.AnimationAction>();
-  current?: THREE.AnimationAction;
+  camera = new THREE.OrthographicCamera(-100,100,100,-100,.1,2000);
   ready = false;
-  root?: THREE.Group;
   bed: BedId = "daun";
-  sleepState = new SleepStateDirector();
   sprite: HTMLCanvasElement;
-  spriteName: SpriteName = "sleep1";
+  spriteName: GimmyAnim = "sleep1";
+  decodedName: GimmyAnim = "sleep1";
   spriteImage?: HTMLImageElement;
-  decodedName: SpriteName = "sleep1";
   spriteTime = 0;
   spriteGeneration = 0;
   qualityLevel: Quality;
   reduced = false;
-  constructor(
-    public canvas: HTMLCanvasElement,
-    quality: Quality,
-  ) {
+  sleepLevel: SleepLevel = 1;
+  targetLevel: SleepLevel = 1;
+  mode: "idle" | "eat" | "transition" | "failed" = "idle";
+  wakeComplete = false;
+
+  constructor(public canvas: HTMLCanvasElement, quality: Quality) {
     this.qualityLevel = quality;
     this.sprite = document.createElement("canvas");
-    this.sprite.className = "sleep-sprite";
+    this.sprite.className = "sleep-sprite new-gimmy-animation";
     canvas.parentElement!.append(this.sprite);
-    this.renderer = new THREE.WebGLRenderer({
-      canvas,
-      alpha: true,
-      antialias: quality !== "low",
-      powerPreference: "low-power",
-    });
-    this.renderer.setClearColor(0, 0);
+    this.renderer = new THREE.WebGLRenderer({canvas,alpha:true,antialias:false,powerPreference:"low-power"});
+    this.renderer.setClearColor(0,0);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.scene.add(new THREE.HemisphereLight(0xb9dfff, 0x6c4036, 2));
-    const light = new THREE.DirectionalLight(0xffdfb0, 2.5);
-    light.position.set(-80, 160, 200);
-    this.scene.add(light);
-    const rim = new THREE.DirectionalLight(0x76bfff, 2);
-    rim.position.set(100, 60, -100);
-    this.scene.add(rim);
     this.quality(quality);
   }
   quality(q: Quality) {
-    this.qualityLevel = q;
-    this.renderer.setPixelRatio(
-      Math.min(devicePixelRatio, q === "low" ? 1 : q === "medium" ? 1.5 : 2),
-    );
+    this.qualityLevel=q;
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio,q==="low"?1:q==="medium"?1.5:2));
     this.resize();
-    if (this.ready) void this.changeSprite(this.spriteName);
   }
   resize() {
-    const w = this.canvas.clientWidth,
-      h = this.canvas.clientHeight;
-    if (!w || !h) return;
-    this.renderer.setSize(w, h, false);
-    this.camera.left = (-1.7 * w) / h;
-    this.camera.right = (1.7 * w) / h;
-    this.camera.top = 1.7;
-    this.camera.bottom = -1.7;
-    this.camera.updateProjectionMatrix();
+    const w=this.canvas.clientWidth,h=this.canvas.clientHeight;
+    if(!w||!h)return;
+    this.renderer.setSize(w,h,false);
   }
-  async load(bed: BedId = "daun") {
-    // Beds are composited as PNG layers in main.ts. The Three.js canvas is
-    // retained for character compatibility, but no bed GLB is loaded.
-    this.bed = bed;
-    this.ready = true;
-    this.resize();
-    this.resetSleep();
-    await this.changeSprite("sleep1");
+  async load(bed: BedId="daun") {
+    this.bed=bed; this.ready=true; this.resize();
+    await this.setHome();
   }
-  async changeSprite(name: SpriteName) {
-    this.spriteName = name;
-    this.spriteTime = 0;
-    const generation = ++this.spriteGeneration;
-    this.sprite.style.opacity = "0.6";
-    // Retain the last decoded frame while the next state loads.
+  private async change(name:GimmyAnim, mode=this.mode) {
+    this.spriteName=name; this.spriteTime=0; this.mode=mode;
+    const generation=++this.spriteGeneration;
     try {
-      const still = await loadSprite(name, true);
-      if (generation !== this.spriteGeneration) return;
-      this.spriteImage = still;
-      this.decodedName = name;
-      this.sprite.style.opacity = "1";
-      drawSprite(this.sprite, name, still, 0);
-      if (!this.reduced) {
-        const image = await loadSprite(
-          name,
-          false,
-          this.qualityLevel === "low",
-        );
-        if (generation !== this.spriteGeneration) return;
-        this.spriteImage = image;
-      }
-    } catch {
-      if (generation === this.spriteGeneration) this.sprite.style.opacity = "1";
+      const image=await loadGimmyAnim(name);
+      if(generation!==this.spriteGeneration)return;
+      this.spriteImage=image; this.decodedName=name;
+      drawGimmyAnim(this.sprite,name,image,0,mode!=="idle");
+    } catch(e) { console.error(e); }
+  }
+  async setHome() {
+    this.sleepLevel=1; this.targetLevel=1; this.wakeComplete=false;
+    await this.change("sleep1","idle");
+  }
+  async startGameplay() {
+    this.sleepLevel=3; this.targetLevel=3; this.wakeComplete=false;
+    await this.change("sleep3","idle");
+  }
+  resetSleep() { void this.setHome(); }
+
+  private levelForSleep(value:number):SleepLevel {
+    // Broad bands keep each anxiety stage on screen longer.
+    if(value<=0)return 5;
+    if(value>=96)return 1;
+    if(value>=85)return 2;
+    if(value>=35)return 3;
+    return 4;
+  }
+  setSleep(value:number) {
+    const next=this.levelForSleep(value);
+    this.targetLevel=next;
+    if(next===5 && this.sleepLevel===4 && this.mode==="idle") void this.beginWorsening();
+    // Recovery is intentionally responsive: calmer states may replace the idle immediately.
+    if(next<this.sleepLevel && this.mode==="idle") {
+      this.sleepLevel=next;
+      void this.change(idleName(next as Exclude<SleepLevel,5>),"idle");
     }
   }
-  resetSleep() {
-    this.sleepState.reset();
-    void this.changeSprite("sleep1");
+  feed() {
+    if(this.mode!=="idle" || this.sleepLevel===5)return;
+    void this.change(eatName(this.sleepLevel as Exclude<SleepLevel,5>),"eat");
   }
-  setSleep(value: number) {
-    const next = stateSprite[this.sleepState.update(value)];
-    if (next !== this.spriteName) void this.changeSprite(next);
+  private async beginWorsening() {
+    if(this.mode!=="idle" || this.targetLevel<=this.sleepLevel)return;
+    const from=this.sleepLevel;
+    await this.change(transitionName(from),"transition");
   }
-  play(name: string, once = false) {
-    const action = this.actions.get(name);
-    if (!action || action === this.current) return;
-    const old = this.current;
-    action.reset();
-    action.setLoop(
-      once ? THREE.LoopOnce : THREE.LoopRepeat,
-      once ? 1 : Infinity,
-    );
-    action.clampWhenFinished = once;
-    action.play();
-    if (old) action.crossFadeFrom(old, 0.5, false);
-    this.current = action;
+  private async finishOnce() {
+    if(this.mode==="eat") {
+      // Eat always finishes. Afterwards use the newest meter state.
+      const next=this.targetLevel;
+      if(next<this.sleepLevel) this.sleepLevel=next;
+      await this.change(idleName(this.sleepLevel as Exclude<SleepLevel,5>),"idle");
+      if(this.targetLevel>this.sleepLevel) await this.beginWorsening();
+      return;
+    }
+    if(this.mode==="transition") {
+      this.sleepLevel=(this.sleepLevel+1) as SleepLevel;
+      if(this.sleepLevel===5) {
+        this.mode="failed"; this.wakeComplete=true;
+        return;
+      }
+      await this.change(idleName(this.sleepLevel as Exclude<SleepLevel,5>),"idle");
+      if(this.targetLevel>this.sleepLevel) await this.beginWorsening();
+    }
   }
-  render(dt: number, playing: boolean) {
-    if (playing) this.mixer?.update(dt);
-    if (playing) this.spriteTime += dt;
-    if (this.spriteImage)
-      drawSprite(
-        this.sprite,
-        this.decodedName,
-        this.spriteImage,
-        this.reduced ? 0 : this.spriteTime,
-        this.sleepState.state === "awake",
-      );
-    this.renderer.render(this.scene, this.camera);
+  render(dt:number, playing:boolean) {
+    if(playing) this.spriteTime+=dt;
+    const once=this.mode!=="idle";
+    if(this.spriteImage) drawGimmyAnim(this.sprite,this.decodedName,this.spriteImage,this.reduced?0:this.spriteTime,once);
+    if(playing && once && this.spriteTime>=animDuration(this.decodedName)) void this.finishOnce();
+    if(playing && this.mode==="idle" && this.targetLevel>this.sleepLevel) {
+      const duration=animDuration(this.decodedName);
+      // Anxiety increases only at a clean idle-loop boundary.
+      if(this.spriteTime>=duration) {
+        this.spriteTime%=duration;
+        void this.beginWorsening();
+      }
+    }
+    this.renderer.render(this.scene,this.camera);
   }
 }
