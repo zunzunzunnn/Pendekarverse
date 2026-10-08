@@ -290,19 +290,17 @@ function help() {
 function book() {
   collectionDialog(
     "bugs",
-    `<div class="bug-card-grid">${BUG_CARDS.map(([name, file]) => `<button class="bug-card" data-bug-card="${file}" aria-label="Preview ${name}"><img src="${base}gimmy/bug-cards/${file}" alt="${name}"/></button>`).join("")}</div><div id="bug-preview" class="skin-preview" hidden><button class="skin-preview-close" aria-label="Tutup preview">×</button><img alt="Bug preview"/></div>`,
+    `<div class="bug-card-grid">${BUG_CARDS.map(([name, file]) => `<button class="bug-card" data-bug-card="${file}" aria-label="Preview ${name}"><img src="${base}gimmy/bug-cards/${file}" alt="${name}"/></button>`).join("")}</div><div id="bug-preview" class="skin-preview bug-art-popup" hidden><img src="${base}gimmy/collection-ui/bugs%20pop%20up.png" alt="Bug Guide lengkap"/></div>`,
     `${BUG_CARDS.length}/${BUG_CARDS.length}`,
   );
   const preview = $<HTMLDivElement>("#bug-preview");
-  const previewImg = preview.querySelector("img")!;
   modal.querySelectorAll<HTMLButtonElement>(".bug-card").forEach((button) => {
     button.onclick = () => {
-      previewImg.src = `${base}gimmy/bug-cards/${button.dataset.bugCard}`;
       preview.hidden = false;
     };
   });
   preview.onclick = (event) => {
-    if (event.target === preview || (event.target as HTMLElement).closest(".skin-preview-close")) preview.hidden = true;
+    preview.hidden = true;
   };
 }
 function skinsCollection() {
