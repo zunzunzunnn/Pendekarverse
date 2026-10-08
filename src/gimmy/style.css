@@ -1568,3 +1568,19 @@ dialog.collection-dialog{
   transform:translate(-50%,-50%);z-index:4;pointer-events:none;
 }
 #character-anchor #gimmy{display:none;}
+
+/* Larger collection information artwork; click anywhere to return to cards. */
+.collection-dialog .skin-preview.skin-art-popup>img,
+.collection-dialog .skin-preview.bug-art-popup>img{
+  width:min(97vw,1800px) !important;
+  height:min(96svh,1050px) !important;
+  max-width:97vw !important;
+  max-height:96svh !important;
+  object-fit:contain;
+  filter:none;
+}
+.bug-art-popup{cursor:pointer;}
+/* 180% of the current in-game moth size, other bugs unchanged. */
+#objects .entity.moth{transform-origin:center center;}
+#objects .entity.moth .bug-art,
+#objects .entity.moth .bug-animation{transform:scale(1.8);transform-origin:center center;}
