@@ -1584,3 +1584,7 @@ dialog.collection-dialog{
 #objects .entity.moth{transform-origin:center center;}
 #objects .entity.moth .bug-art,
 #objects .entity.moth .bug-animation{transform:scale(1.8);transform-origin:center center;}
+
+/* Gameplay interaction feedback */
+.entity.beetle.cracked{filter:drop-shadow(0 0 12px rgba(255,220,100,.9));animation:beetle-flip .35s ease-out;}
+@keyframes beetle-flip{0%{rotate:0deg}50%{rotate:85deg}100%{rotate:180deg}}
