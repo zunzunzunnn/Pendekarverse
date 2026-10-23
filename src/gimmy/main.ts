@@ -130,6 +130,7 @@ interface Entity {
   max: number;
   el: HTMLButtonElement;
   used: boolean;
+  armor?: number;
 }
 let state: State = "home",
   selected = levelFor(progress.xp),
@@ -146,6 +147,8 @@ let scene: GimmyScene | undefined,
   frame = 0,
   serial = 0;
 let hitTimes: number[] = [];
+let combo = 0, lastFeedAt = -100, calmCooldown = 0;
+let noise = 0;
 let entities: Entity[] = [],
   drag: {
     entity: Entity;
@@ -441,6 +444,7 @@ function start(level = selected) {
   idle = 0;
   wakeTime = 0;
   hitTimes = [];
+  combo = 0; lastFeedAt = -100; calmCooldown = 0; noise = 0;
   document.body.classList.remove("awake");
   document.body.classList.add("in-game");
   $("#home").hidden = true;
@@ -545,7 +549,7 @@ function updateHUD() {
     Math.ceil(run.sleep).toString(),
   );
   $("#sleep-number").textContent = Math.ceil(run.sleep).toString();
-  $("#risk").textContent =
+  $("#risk").textContent = noise > 70 ? "Hutan berisik! Tenangkan Gimiy." :
     run.sleep < 25
       ? "Gimmy gelisah. Cari makanan!"
       : "Jaga mimpinya sampai waktu habis";
@@ -595,6 +599,7 @@ function spawn(type: Kind, lifetime = 6, lane = Math.floor(Math.random() * 3)) {
     max: lifetime,
     el,
     used: false,
+    armor: type === "beetle" ? 1 : 0,
   };
   el.setAttribute(
     "aria-label",
@@ -732,6 +737,13 @@ function cancelDrag() {
 }
 function resolve(e: Entity, success: boolean) {
   if (e.used || state !== "playing") return;
+  if (success && e.armor) {
+    e.armor = 0;
+    e.el.classList.add("cracked");
+    toast("Kumbang terbalik! Tangkap sekali lagi.");
+    tone(310);
+    return;
+  }
   remove(e);
   if (success) {
     if (e.type === "leaf" || e.type === "frog") {
@@ -752,7 +764,12 @@ function resolve(e: Entity, success: boolean) {
           fx.style.opacity = "0";
         });
       window.setTimeout(() => fx.remove(), 450);
-      run.change(foodValue[e.type]);
+      combo = run.seconds - lastFeedAt <= 7 ? combo + 1 : 1;
+      lastFeedAt = run.seconds;
+      const bonus = combo >= 3 ? 3 : 0;
+      run.change(foodValue[e.type] + bonus);
+      noise = Math.max(0, noise - 5);
+      if (bonus) { toast(`Sweet Dream Combo ×${combo} · +${bonus} bonus!`); tone(760); }
       scene?.feed();
       progress.bugs[e.type]++;
       save();
@@ -782,10 +799,14 @@ function simulate(dt: number) {
       0,
     );
     for (const e of impacts) remove(e);
-    run.step(step, damage);
+    run.step(step, damage + (noise > 70 ? step * 0.9 : 0));
     remaining -= step;
     idle += step;
+    noise = Math.max(0, noise - step * 1.7);
+    calmCooldown = Math.max(0, calmCooldown - step);
     if (damage) {
+      combo = 0;
+      noise = Math.min(100, noise + damage * 1.2);
       hitTimes = hitTimes.filter((t) => run.seconds - t <= 1);
       hitTimes.push(run.seconds);
       if (hitTimes.length >= 2)
@@ -845,6 +866,15 @@ $("#book").onclick = book;
 $("#skins").onclick = skinsCollection;
 $("#how").onclick = help;
 $("#pause").onclick = pause;
+$("#character-anchor").addEventListener("pointerdown", (ev) => {
+  if (state !== "playing" || calmCooldown > 0 || (ev.target as HTMLElement).closest("button")) return;
+  calmCooldown = 9;
+  noise = Math.max(0, noise - 20);
+  run.change(2);
+  toast("Ssst… Gimiy lebih tenang · Noise −20");
+  tone(390);
+  updateHUD();
+});
 $("#branch").onclick = () => {
   syncInputTime();
   const e = entities.find((e) => e.type === "frog");
