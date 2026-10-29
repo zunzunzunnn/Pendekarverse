@@ -22,7 +22,7 @@ jobs:
       - name: Install project and Android wrapper
         run: |
           npm ci
-          npm install --no-save --package-lock=false @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          npm install --save-dev @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
       - name: Build offline web assets
         run: npm run build
       - name: Configure Capacitor
