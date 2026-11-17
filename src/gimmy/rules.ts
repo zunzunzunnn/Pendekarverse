@@ -1,11 +1,5 @@
 export { levelFor } from "./levels";
-import {
-  BEDS,
-  MAPS,
-  mapUnlocked,
-  type BedId,
-  type WorldId,
-} from "./collections";
+import { BEDS, MAPS, type BedId, type WorldId } from "./collections";
 export type Quality = "low" | "medium" | "high";
 export type MapId = "forest" | "rainforest";
 export type Bug = "moth" | "cricket" | "beetle" | "cockroach";
@@ -122,15 +116,8 @@ export function restoreProgress(
         beetle: safe(p.bugs?.beetle),
         cockroach: safe(p.bugs?.cockroach),
       },
-      selectedBed:
-        BEDS.find((b) => b.id === p.selectedBed && safe(p.xp) >= b.threshold)
-          ?.id ?? "daun",
-      selectedMap:
-        MAPS.find(
-          (m) =>
-            m.id === p.selectedMap &&
-            mapUnlocked(m.id, safe(p.xp), p.legacyRainforestUnlocked === true),
-        )?.id ?? "forest",
+      selectedBed: BEDS.find((b) => b.id === p.selectedBed)?.id ?? "daun",
+      selectedMap: MAPS.find((m) => m.id === p.selectedMap)?.id ?? "forest",
       quality: ["low", "medium", "high"].includes(p.quality)
         ? p.quality
         : fallback.quality,

@@ -56,7 +56,7 @@ describe("sleep conditions and asset progression", () => {
     expect(p.selectedMap).toBe("forest");
     expect(credit(p, "old", 3)).toBe(false);
   });
-  it("falls back to v2 if v3 is corrupt and rejects locked selections", () => {
+  it("falls back to v2 if v3 is corrupt and restores available cosmetics regardless of points", () => {
     const p = loadProgress({
       getItem: (key) =>
         key === "gimmy.progress.v3"
@@ -71,8 +71,8 @@ describe("sleep conditions and asset progression", () => {
             : null,
     });
     expect(p.xp).toBe(39);
-    expect(p.selectedBed).toBe("daun");
-    expect(p.selectedMap).toBe("forest");
+    expect(p.selectedBed).toBe("hamok");
+    expect(p.selectedMap).toBe("dream");
   });
   it("restores unlocked choices and validates unknown identifiers", () => {
     const read = (data: object) =>

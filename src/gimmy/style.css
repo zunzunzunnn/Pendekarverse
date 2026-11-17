@@ -103,6 +103,15 @@ h3,
   pointer-events: none;
 }
 #home-bed-layer { z-index: 2; }
+#home-bed-layer[data-bed="hamok"] {
+  inset: auto;
+  left: 50%;
+  top: 55%;
+  width: min(62vw, 48svh, 460px);
+  height: auto;
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+}
 #character-anchor { z-index: 3; }
 #home-bed-foreground { z-index: 4; }
 #objects { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
@@ -328,6 +337,7 @@ header {
   color: #dbe7b4;
 }
 .logo {
+  pointer-events: none;
   position: absolute;
   top: 10%;
   left: 50%;

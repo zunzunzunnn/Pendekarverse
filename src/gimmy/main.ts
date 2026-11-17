@@ -20,7 +20,6 @@ import {
   MAPS,
   BUG_ART,
   EXTRA_BUG_NAMES,
-  mapUnlocked,
   type BedId,
   type WorldId,
 } from "./collections";
@@ -38,11 +37,12 @@ const HOME_BACKGROUNDS: Record<WorldId, string> = {
   dream: "Asset2_0000s_0000s_0003_Dream.webp",
   rainforest: "Asset2_0000s_0000s_0002_Rainforest.webp",
 };
-const HOME_BEDS: Partial<Record<BedId, string>> = {
+const HOME_BEDS: Record<BedId, string> = {
   daun: "Asset2_0000s_0003_Leaf.webp",
   ranting: "Asset2_0000s_0004_Twig.webp",
   goa: "Asset2_0000s_0001_Goa.webp",
   kasur: "Asset2_0000s_0002_Bed.webp",
+  hamok: "gimmy/beds/hamok-scene.webp",
 };
 const BED_CARDS: Partial<Record<BedId, string>> = {
   daun: "Asset2_0000s_0000s_0002_Leaf.webp",
@@ -327,11 +327,14 @@ function refreshWorld() {
   $(".forest-art").style.backgroundImage =
     `url("${rootAsset(HOME_BACKGROUNDS[map.id])}")`;
   const bedId = progress.selectedBed ?? "daun";
-  const bed = HOME_BEDS[bedId] ?? HOME_BEDS.daun!;
-  const bedForeground =
-    HOME_BED_FOREGROUNDS[bedId] ?? HOME_BED_FOREGROUNDS.daun!;
-  $<HTMLImageElement>("#home-bed-layer").src = rootAsset(bed);
-  $<HTMLImageElement>("#home-bed-foreground").src = rootAsset(bedForeground);
+  const bedLayer = $<HTMLImageElement>("#home-bed-layer");
+  bedLayer.dataset.bed = bedId;
+  bedLayer.src = rootAsset(HOME_BEDS[bedId]);
+  const foreground = $<HTMLImageElement>("#home-bed-foreground");
+  const bedForeground = HOME_BED_FOREGROUNDS[bedId];
+  foreground.hidden = !bedForeground;
+  if (bedForeground) foreground.src = rootAsset(bedForeground);
+  else foreground.removeAttribute("src");
   $("#my-bed").title =
     `Bed ${BEDS.find((b) => b.id === bedId)!.name}`;
 }

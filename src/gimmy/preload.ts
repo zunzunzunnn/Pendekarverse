@@ -12,6 +12,7 @@ export function startupAssets() {
     ...gimmyAnimationPaths,
     ...[
       "logo.webp",
+    "beds/hamok-scene.webp",
       ...[
         "bugs",
         "chain",
