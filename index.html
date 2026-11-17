@@ -15,7 +15,73 @@
     <link rel="icon" type="image/svg+xml" href="./icon.svg" />
   </head>
   <body>
-    <div id="app"></div>
+    <div id="startup" class="startup">
+      <div class="startup-card">
+        <img src="./gimmy/logo.webp" alt="Gimmy: The Little Tarsius" />
+        <p id="startup-status" role="status">Menyiapkan dunia Gimmy…</p>
+        <progress
+          id="startup-bar"
+          aria-label="Aset Gimmy"
+          max="100"
+          value="0"
+        ></progress>
+        <span id="startup-percent" aria-hidden="true">0%</span>
+        <button id="startup-retry" type="button" hidden>Coba lagi</button>
+      </div>
+    </div>
+    <style>
+      .startup {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(ellipse at 50% 42%, #254c42, #091c25 75%);
+        color: #fff2cf;
+        font-family: Sniglet, system-ui, sans-serif;
+        padding: 20px;
+      }
+      .startup[hidden] {
+        display: none;
+      }
+      .startup-card {
+        width: min(100%, 350px);
+        text-align: center;
+      }
+      .startup-card img {
+        width: min(100%, 270px);
+        max-height: 35vh;
+        object-fit: contain;
+      }
+      #startup-status {
+        min-height: 1.5em;
+        margin: 18px 0 12px;
+      }
+      #startup-bar {
+        display: block;
+        width: 100%;
+        height: 14px;
+        accent-color: #e9bc68;
+      }
+      #startup-percent {
+        display: block;
+        margin-top: 9px;
+      }
+      #startup-retry {
+        margin: 15px auto 0;
+        padding: 10px 22px;
+        border: 0;
+        border-radius: 12px;
+        background: #e9bc68;
+        color: #182921;
+        font: inherit;
+        cursor: pointer;
+      }
+      #startup-retry[hidden] {
+        display: none;
+      }
+    </style>
+    <div id="app" inert></div>
     <script type="module" src="/src/gimmy/main.ts"></script>
   </body>
 </html>

@@ -14,6 +14,7 @@ import { CountdownRun } from "./countdown";
 import { ObstacleDirector } from "./director";
 import { SAVE_KEY, loadProgress, credit } from "./storage";
 import { icons } from "./icons";
+import { preloadAssets, startupAssets } from "./preload";
 import {
   BEDS,
   MAPS,
@@ -31,53 +32,53 @@ const base = import.meta.env.BASE_URL,
   rootAsset = (name: string) => `${base}${name}`;
 
 const HOME_BACKGROUNDS: Record<WorldId, string> = {
-  forest: "Asset2_0000s_0000s_0004_Forest.png",
-  village: "Asset2_0000s_0000s_0000_Village.png",
-  canopy: "Asset2_0000s_0000s_0001_Tree-Canopy.png",
-  dream: "Asset2_0000s_0000s_0003_Dream.png",
-  rainforest: "Asset2_0000s_0000s_0002_Rainforest.png",
+  forest: "Asset2_0000s_0000s_0004_Forest.webp",
+  village: "Asset2_0000s_0000s_0000_Village.webp",
+  canopy: "Asset2_0000s_0000s_0001_Tree-Canopy.webp",
+  dream: "Asset2_0000s_0000s_0003_Dream.webp",
+  rainforest: "Asset2_0000s_0000s_0002_Rainforest.webp",
 };
 const HOME_BEDS: Partial<Record<BedId, string>> = {
-  daun: "Asset2_0000s_0003_Leaf.png",
-  ranting: "Asset2_0000s_0004_Twig.png",
-  goa: "Asset2_0000s_0001_Goa.png",
-  kasur: "Asset2_0000s_0002_Bed.png",
+  daun: "Asset2_0000s_0003_Leaf.webp",
+  ranting: "Asset2_0000s_0004_Twig.webp",
+  goa: "Asset2_0000s_0001_Goa.webp",
+  kasur: "Asset2_0000s_0002_Bed.webp",
 };
 const BED_CARDS: Partial<Record<BedId, string>> = {
-  daun: "Asset2_0000s_0000s_0002_Leaf.png",
-  ranting: "Asset2_0000s_0000s_0004_Twig.png",
-  goa: "Asset2_0000s_0000s_0001_Goa.png",
-  kasur: "Asset2_0000s_0000s_0003_Bed.png",
-  hamok: "Asset2_0000s_0000s_0000_Hamok.png",
+  daun: "Asset2_0000s_0000s_0002_Leaf.webp",
+  ranting: "Asset2_0000s_0000s_0004_Twig.webp",
+  goa: "Asset2_0000s_0000s_0001_Goa.webp",
+  kasur: "Asset2_0000s_0000s_0003_Bed.webp",
+  hamok: "Asset2_0000s_0000s_0000_Hamok.webp",
 };
 const BUG_CARDS = [
-  ["Belalang", "Asset2_0000s_0001s_0008_Belalang.png"],
-  ["Ulat", "Asset2_0000s_0001s_0000_Ulat.png"],
-  ["Semut", "Asset2_0000s_0001s_0001_Semut.png"],
-  ["Rayap", "Asset2_0000s_0001s_0002_Rayap.png"],
-  ["Laba-laba", "Asset2_0000s_0001s_0003_Laba-laba.png"],
-  ["Kumbang", "Asset2_0000s_0001s_0004_Kumbang.png"],
-  ["Ngengat", "Asset2_0000s_0001s_0005_Ngengat.png"],
-  ["Jangkrik", "Asset2_0000s_0001s_0006_Jangkrik.png"],
-  ["Kecoa", "Asset2_0000s_0001s_0007_Kecoa.png"],
+  ["Belalang", "Asset2_0000s_0001s_0008_Belalang.webp"],
+  ["Ulat", "Asset2_0000s_0001s_0000_Ulat.webp"],
+  ["Semut", "Asset2_0000s_0001s_0001_Semut.webp"],
+  ["Rayap", "Asset2_0000s_0001s_0002_Rayap.webp"],
+  ["Laba-laba", "Asset2_0000s_0001s_0003_Laba-laba.webp"],
+  ["Kumbang", "Asset2_0000s_0001s_0004_Kumbang.webp"],
+  ["Ngengat", "Asset2_0000s_0001s_0005_Ngengat.webp"],
+  ["Jangkrik", "Asset2_0000s_0001s_0006_Jangkrik.webp"],
+  ["Kecoa", "Asset2_0000s_0001s_0007_Kecoa.webp"],
 ] as const;
 const SKIN_CARDS = [
-  ["Merah", "Asset2_0000s_0002s_0009_Merah.png"],
-  ["Sakura", "Asset2_0000s_0002s_0008_Sakura.png"],
-  ["Biru Langit", "Asset2_0000s_0002s_0007_Biru-Langit.png"],
-  ["Petualang", "Asset2_0000s_0002s_0006_Petualang.png"],
-  ["Malam", "Asset2_0000s_0002s_0005_Malam.png"],
-  ["Kakek", "Asset2_0000s_0002s_0004_Kakek.png"],
-  ["Hijau", "Asset2_0000s_0002s_0003_Hijau.png"],
-  ["Kuning", "Asset2_0000s_0002s_0002_Kuning.png"],
-  ["Galaxy", "Asset2_0000s_0002s_0001_Galaxy.png"],
-  ["Nusantara", "Asset2_0000s_0002s_0000_Nusantara.png"],
+  ["Merah", "Asset2_0000s_0002s_0009_Merah.webp"],
+  ["Sakura", "Asset2_0000s_0002s_0008_Sakura.webp"],
+  ["Biru Langit", "Asset2_0000s_0002s_0007_Biru-Langit.webp"],
+  ["Petualang", "Asset2_0000s_0002s_0006_Petualang.webp"],
+  ["Malam", "Asset2_0000s_0002s_0005_Malam.webp"],
+  ["Kakek", "Asset2_0000s_0002s_0004_Kakek.webp"],
+  ["Hijau", "Asset2_0000s_0002s_0003_Hijau.webp"],
+  ["Kuning", "Asset2_0000s_0002s_0002_Kuning.webp"],
+  ["Galaxy", "Asset2_0000s_0002s_0001_Galaxy.webp"],
+  ["Nusantara", "Asset2_0000s_0002s_0000_Nusantara.webp"],
 ] as const;
 const HOME_BED_FOREGROUNDS: Partial<Record<BedId, string>> = {
-  daun: "Asset_0000s_0001_Foreground_Leaf.png",
-  ranting: "Asset_0000s_0000_Foreground_Twig.png",
-  goa: "Asset_0000s_0002_Foreground_Goa.png",
-  kasur: "Asset_0000s_0003_Foreground__Bed.png",
+  daun: "Asset_0000s_0001_Foreground_Leaf.webp",
+  ranting: "Asset_0000s_0000_Foreground_Twig.webp",
+  goa: "Asset_0000s_0002_Foreground_Goa.webp",
+  kasur: "Asset_0000s_0003_Foreground__Bed.webp",
 };
 const animatedBugs = new Map<SpriteName, HTMLImageElement>();
 function bugArt(type: string, animate = false) {
@@ -164,7 +165,7 @@ const format = (t: number) => {
     .padStart(2, "0")}:${(n % 60).toString().padStart(2, "0")}`;
 };
 $("#app").innerHTML = `<main id="shell">
- <div id="stage"><div class="forest-art"></div><img id="home-bed-layer" class="home-scene-layer" alt=""/><div class="mist"></div><div id="fireflies" aria-hidden="true">${Array.from({ length: 16 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--y:${(i * 23) % 90}%;--delay:${i * 0.4}s"></i>`).join("")}</div><div id="character-anchor"><div class="gimmy-shadow"></div><canvas id="gimmy" aria-label="Gimmy si tarsius kecil"></canvas><div class="zzz" aria-hidden="true">z<span>z</span><small>z</small></div></div><img id="home-bed-foreground" class="home-scene-layer" alt=""/><div id="objects"></div><img id="home-global-foreground" class="home-scene-layer" src="${rootAsset("Asset2_0000s_0000_Foreground.png")}" alt=""/></div>
+ <div id="stage"><div class="forest-art"></div><img id="home-bed-layer" class="home-scene-layer" alt=""/><div class="mist"></div><div id="fireflies" aria-hidden="true">${Array.from({ length: 16 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--y:${(i * 23) % 90}%;--delay:${i * 0.4}s"></i>`).join("")}</div><div id="character-anchor"><div class="gimmy-shadow"></div><canvas id="gimmy" aria-label="Gimmy si tarsius kecil"></canvas><div class="zzz" aria-hidden="true">z<span>z</span><small>z</small></div></div><img id="home-bed-foreground" class="home-scene-layer" alt=""/><div id="objects"></div><img id="home-global-foreground" class="home-scene-layer" src="${rootAsset("Asset2_0000s_0000_Foreground.webp")}" alt=""/></div>
  <div class="edge-shade"></div>
  <header><a href="#" class="wordmark" aria-label="Beranda Gimmy">GIMMY<span>THE LITTLE TARSIUS</span></a><button id="settings" class="art-button" aria-label="Pengaturan"><img src="${asset("settings")}" alt=""/></button></header>
  <button id="profile" aria-label="Pilih level"><img src="${asset("level")}" alt=""/><div><h2>Gimmy</h2><strong id="level"></strong><small id="xp"></small><div class="xp-track"><i id="xpbar"></i></div></div></button>
@@ -172,7 +173,7 @@ $("#app").innerHTML = `<main id="shell">
  <section id="home"><img class="logo" src="${base}gimmy/logo.webp" alt="Gimmy : The Little Tarsius"/><div class="home-copy"><h1>Jaga mimpi kecilnya.</h1><p>Redakan riuh hutan. Bertahan sampai 00:00.</p><button id="play" class="art-button" aria-label="Play" disabled><img src="${asset("play")}" alt="Play"/></button><small id="load-note" role="status">Menyiapkan Gimmy…</small><button id="level-choice" class="text-button">Pilih tantangan</button></div></section>
  <section id="hud" hidden><div class="chain-stack"><div id="run-points"><span>✦ Poin tersimpan</span><strong>0</strong><small id="earned">+0 sesi ini</small></div><div class="chain"><img src="${asset("chain")}" alt="Sleep Chain"/><strong id="timer">02:00</strong></div><small id="next-reward"></small><div id="milestones" aria-label="Milestone sesi"><i></i><i></i><i></i><i></i></div></div>
  <button id="pause" class="round-button" aria-label="Jeda permainan">Ⅱ</button><div id="hint" role="status"></div><button id="branch" hidden>♧ Ketuk ranting <small>Alihkan katak</small></button><div class="sleep-panel"><div><span>☾ SLEEP METER</span><strong id="sleep-label">Cozy</strong></div><div class="sleep-track" role="progressbar" aria-label="Sleep Meter" aria-valuemin="0" aria-valuemax="100"><i id="sleep-fill"></i></div><small><span id="sleep-number">80</span> / 100 <span id="risk">Jaga mimpinya sampai waktu habis</span></small></div></section>
- <nav id="home-nav"><button id="book" class="art-button collection-entry" aria-label="Bug Guide"><img src="${base}gimmy/collection-ui/Bug Guide2.png" alt="Bug Guide"/></button><button id="my-bed" class="art-button collection-entry" aria-label="Bed Upgrade"><img src="${base}gimmy/collection-ui/Bed Upgrade.png" alt="Bed Upgrade"/></button><button id="skins" class="art-button collection-entry" aria-label="Skins Collection"><img src="${base}gimmy/collection-ui/Collection.png" alt="Skins Collection"/></button><button id="how" class="art-button" aria-label="Cara bermain"><img src="${asset("info")}" alt="Info"/></button></nav>
+ <nav id="home-nav"><button id="book" class="art-button collection-entry" aria-label="Bug Guide"><img src="${base}gimmy/collection-ui/Bug Guide2.webp" alt="Bug Guide"/></button><button id="my-bed" class="art-button collection-entry" aria-label="Bed Upgrade"><img src="${base}gimmy/collection-ui/Bed Upgrade.webp" alt="Bed Upgrade"/></button><button id="skins" class="art-button collection-entry" aria-label="Skins Collection"><img src="${base}gimmy/collection-ui/Collection.webp" alt="Skins Collection"/></button><button id="how" class="art-button" aria-label="Cara bermain"><img src="${asset("info")}" alt="Info"/></button></nav>
  <div id="ready-cue" hidden aria-live="polite"></div><footer><span>GIMMY · SLEEP CHALLENGE</span><span id="best"></span></footer>
  </main><div id="toast" role="status"></div><dialog id="dialog" aria-labelledby="dialog-title"></dialog>`;
 const modal = $<HTMLDialogElement>("#dialog");
@@ -238,9 +239,9 @@ function dialog(title: string, body: string) {
   if (!modal.open) modal.showModal();
 }
 function collectionDialog(kind: "beds" | "skins" | "bugs", body: string, total: string) {
-  const title = kind === "beds" ? "Asset2_0000s_0000_Beds-Collection.png" : kind === "skins" ? "Asset2_0000s_0001_Skins-Collection.png" : "Asset2_0000s_0002_Bugs-Guide-Collection.png";
+  const title = kind === "beds" ? "Asset2_0000s_0000_Beds-Collection.webp" : kind === "skins" ? "Asset2_0000s_0001_Skins-Collection.webp" : "Asset2_0000s_0002_Bugs-Guide-Collection.webp";
   modal.classList.add("collection-dialog");
-  modal.innerHTML = `<div class="collection-bg"></div><img class="collection-panel" src="${base}gimmy/collection-ui/Asset2_0000s_0005_Panel.png" alt=""/><img class="collection-title" src="${base}gimmy/collection-ui/${title}" alt=""/><div class="collection-total"><img src="${base}gimmy/collection-ui/Asset2_0000s_0004_Total-Skin.png" alt="Total"/><strong>${total}</strong></div><button class="collection-exit" aria-label="Kembali ke main menu"><img src="${base}gimmy/collection-ui/Asset2_0000s_0003_Exit.png" alt="Exit"/></button><div class="collection-content">${body}</div>`;
+  modal.innerHTML = `<div class="collection-bg"></div><img class="collection-panel" src="${base}gimmy/collection-ui/Asset2_0000s_0005_Panel.webp" alt=""/><img class="collection-title" src="${base}gimmy/collection-ui/${title}" alt=""/><div class="collection-total"><img src="${base}gimmy/collection-ui/Asset2_0000s_0004_Total-Skin.webp" alt="Total"/><strong>${total}</strong></div><button class="collection-exit" aria-label="Kembali ke main menu"><img src="${base}gimmy/collection-ui/Asset2_0000s_0003_Exit.webp" alt="Exit"/></button><div class="collection-content">${body}</div>`;
   modal.querySelector(".collection-exit")!.addEventListener("click", () => modal.close());
   modal.addEventListener("close", () => modal.classList.remove("collection-dialog"), { once: true });
   if (!modal.open) modal.showModal();
@@ -293,7 +294,7 @@ function help() {
 function book() {
   collectionDialog(
     "bugs",
-    `<div class="bug-card-grid">${BUG_CARDS.map(([name, file]) => `<button class="bug-card" data-bug-card="${file}" aria-label="Preview ${name}"><img src="${base}gimmy/bug-cards/${file}" alt="${name}"/></button>`).join("")}</div><div id="bug-preview" class="skin-preview bug-art-popup" hidden><img src="${base}gimmy/collection-ui/bugs%20pop%20up.png" alt="Bug Guide lengkap"/></div>`,
+    `<div class="bug-card-grid">${BUG_CARDS.map(([name, file]) => `<button class="bug-card" data-bug-card="${file}" aria-label="Preview ${name}"><img src="${base}gimmy/bug-cards/${file}" alt="${name}"/></button>`).join("")}</div><div id="bug-preview" class="skin-preview bug-art-popup" hidden><img src="${base}gimmy/collection-ui/bugs%20pop%20up.webp" alt="Bug Guide lengkap"/></div>`,
     `${BUG_CARDS.length}/${BUG_CARDS.length}`,
   );
   const preview = $<HTMLDivElement>("#bug-preview");
@@ -309,7 +310,7 @@ function book() {
 function skinsCollection() {
   collectionDialog(
     "skins",
-    `<div class="skin-card-grid">${SKIN_CARDS.map(([name, file]) => `<button class="skin-card" data-skin="${file}" aria-label="Pilih skin ${name}"><img src="${base}gimmy/skins/${file}" alt="${name}"/></button>`).join("")}</div><div id="skin-preview" class="skin-preview skin-art-popup" hidden><img src="${base}gimmy/collection-ui/pop%20up%20Skins%20copy.png" alt="Skin popup"/></div>`,
+    `<div class="skin-card-grid">${SKIN_CARDS.map(([name, file]) => `<button class="skin-card" data-skin="${file}" aria-label="Pilih skin ${name}"><img src="${base}gimmy/skins/${file}" alt="${name}"/></button>`).join("")}</div><div id="skin-preview" class="skin-preview skin-art-popup" hidden><img src="${base}gimmy/collection-ui/pop%20up%20Skins%20copy.webp" alt="Skin popup"/></div>`,
     `${SKIN_CARDS.length}/${SKIN_CARDS.length}`,
   );
   const preview = $<HTMLDivElement>("#skin-preview");
@@ -952,22 +953,40 @@ applyQuality();
 layoutScene();
 save();
 async function load() {
+  const retry = $<HTMLButtonElement>("#startup-retry");
+  const status = $("#startup-status");
+  retry.hidden = true;
+  status.textContent = "Memuat aset Gimmy…";
+  function showProgress(percent: number) {
+    $<HTMLProgressElement>("#startup-bar").value = percent;
+    $("#startup-percent").textContent = `${percent}%`;
+  }
   try {
-    scene = new GimmyScene($<HTMLCanvasElement>("#gimmy"), progress.quality);
+    await preloadAssets(
+      startupAssets(),
+      (done, total) => {
+        showProgress(Math.floor((95 * done) / total));
+      },
+    );
+    status.textContent = "Menyiapkan tempat mimpi…";
+    await document.fonts.ready;
+    scene ??= new GimmyScene($<HTMLCanvasElement>("#gimmy"), progress.quality);
     scene.reduced = progress.reduced;
     await scene.load(progress.selectedBed ?? "daun");
     layoutScene();
-    ready = true;
-    $<HTMLButtonElement>("#play").disabled = false;
-    $("#load-note").textContent = "Pilih kualitas visual sebelum bermain";
+    collectionLoading(false);
+    showProgress(100);
+    $("#app").inert = false;
+    $("#startup").hidden = true;
   } catch (e) {
-    console.error(e);
-    $("#load-note").textContent =
-      "Model gagal dimuat. Ketuk Play untuk mencoba lagi.";
-    $<HTMLButtonElement>("#play").disabled = false;
-    $("#play").onclick = () => location.reload();
+    status.textContent =
+      "Sebagian aset gagal dimuat. Periksa koneksi, lalu coba lagi.";
+    retry.hidden = false;
   }
 }
+$("#startup-retry").onclick = () => void load();
+
+
 void load();
 requestAnimationFrame(tick);
 if (import.meta.env.DEV)
@@ -981,7 +1000,6 @@ if (import.meta.env.DEV)
           map: progress.selectedMap,
           sleepState: scene?.sleepLevel,
           sprite: scene?.decodedName,
-          renderResources: { ...scene?.renderer.info.memory },
           sleep: run.sleep,
           seconds: run.seconds,
           remaining: run.remaining,
